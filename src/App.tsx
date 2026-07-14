@@ -4,6 +4,8 @@ import { AdminPanel } from "./components/AdminPanel";
 import { InvoicePreview } from "./components/InvoicePreview";
 import { ShieldCheck, Database, HelpCircle, Download, CheckCircle, RefreshCw, AlertCircle, Copy, Check, ExternalLink, ArrowLeft, Trash2 } from "lucide-react";
 import { toPng } from "html-to-image";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { db } from "./lib/firebase";
 
 const DEFAULT_INVOICE_DATA: InvoiceData = {
   id: "",
@@ -151,7 +153,7 @@ export default function App() {
     }
   }, []);
 
-  // Fetch verified invoice from backend
+  // Fetch verified invoice from backend / Firebase
   const fetchVerifiedInvoice = async (id: string) => {
     setIsLookupLoading(true);
     setLookupError(null);
@@ -168,6 +170,20 @@ export default function App() {
         }
       }
 
+      // Try Firebase directly (works on Vercel)
+      try {
+        const docRef = doc(db, "invoices", id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setVerifiedData(docSnap.data() as InvoiceData);
+          setIsLookupLoading(false);
+          return;
+        }
+      } catch (fbError) {
+        console.warn("Firebase direct read failed", fbError);
+      }
+
+      // Fallback to our express backend if Firebase fails or doesn't have it
       const response = await fetch(`/api/invoices/${id}`);
       if (!response.ok) {
         throw new Error("ভেরিফিকেশন আইডি পাওয়া যায়নি অথবা ডাটাবেজে রেকর্ডটি নেই!");
@@ -191,25 +207,37 @@ export default function App() {
       const updatedData = {
         ...invoiceData,
         id: uniqueId,
+        createdAt: new Date().toISOString(),
       };
 
-      const response = await fetch("/api/invoices", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(updatedData),
-      });
-
-      if (!response.ok) {
-        throw new Error("ইনভয়েস সেভ করতে সমস্যা হয়েছে!");
+      // Try saving to Firebase directly (for static hosts like Vercel)
+      let savedDirectly = false;
+      try {
+        await setDoc(doc(db, "invoices", uniqueId), updatedData);
+        savedDirectly = true;
+      } catch (fbError) {
+        console.warn("Firebase direct save failed", fbError);
       }
 
-      const result = await response.json();
-      setGeneratedId(result.id);
+      // If we couldn't save directly, or just as a fallback/sync, try the backend API
+      if (!savedDirectly) {
+        const response = await fetch("/api/invoices", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(updatedData),
+        });
+
+        if (!response.ok) {
+          throw new Error("ইনভয়েস সেভ করতে সমস্যা হয়েছে!");
+        }
+      }
+
+      setGeneratedId(uniqueId);
       setInvoiceData(updatedData);
       setIsSaving(false);
-      return result.id;
+      return uniqueId;
     } catch (err) {
       console.warn("Backend save failed, using fallback URL encoding.", err);
       const uniqueId = "inv_" + Math.random().toString(36).substring(2, 15);
