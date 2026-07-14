@@ -603,16 +603,11 @@ export default function App() {
                   Caption Template
                 </div>
               </div>
-              {`🎉 অভিনন্দন!
-
-Unity Earning E-Learning Platform-এ আপনার অ্যাকাউন্ট সফলভাবে অ্যাক্টিভ হয়েছে।
-
-আপনার অ্যাকাউন্টের বিস্তারিত দেখতে নিচের লিংকে ক্লিক করুন:
-👉 ${generatedId ? `${window.location.origin}${window.location.pathname}?id=${generatedId}` : ""}`}
+              {`🎉 অভিনন্দন!\n\nUnity Earning E-Learning Platform-এ আপনার অ্যাকাউন্ট সফলভাবে অ্যাক্টিভ হয়েছে。\n\nআপনার অ্যাকাউন্টের বিস্তারিত দেখতে নিচের লিংকে ক্লিক করুন:\n👉 ${generatedId ? `${typeof window !== "undefined" ? window.location.href.split("?")[0] : ""}?id=${generatedId}` : ""}`}
             </div>
             <button
               onClick={() => {
-                const text = `🎉 অভিনন্দন!\n\nUnity Earning E-Learning Platform-এ আপনার অ্যাকাউন্ট সফলভাবে অ্যাক্টিভ হয়েছে।\n\nআপনার অ্যাকাউন্টের বিস্তারিত দেখতে নিচের লিংকে ক্লিক করুন:\n👉 ${generatedId ? `${window.location.origin}${window.location.pathname}?id=${generatedId}` : ""}`;
+                const text = `🎉 অভিনন্দন!\n\nUnity Earning E-Learning Platform-এ আপনার অ্যাকাউন্ট সফলভাবে অ্যাক্টিভ হয়েছে।\n\nআপনার অ্যাকাউন্টের বিস্তারিত দেখতে নিচের লিংকে ক্লিক করুন:\n👉 ${generatedId ? `${typeof window !== "undefined" ? window.location.href.split("?")[0] : ""}?id=${generatedId}` : ""}`;
                 navigator.clipboard.writeText(text);
                 setCopied(true);
                 setTimeout(() => setCopied(false), 2000);

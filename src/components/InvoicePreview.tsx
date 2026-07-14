@@ -73,16 +73,16 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
               )}
             </div>
 
-            <div className="flex flex-col max-w-[220px] text-left">
+            <div className="flex flex-col max-w-[180px] text-left">
               <h1 className="text-xl font-black tracking-tight text-white leading-tight break-words">
                 {companyName.toUpperCase()}
               </h1>
-              <span className="text-[11px] text-[#7DD3FC] font-bold tracking-widest mt-1">
+              <span className="text-[12px] text-[#7DD3FC] font-bold tracking-widest mt-1">
                 E-LEARNING PLATFORM
               </span>
               <div className="flex items-center gap-1.5 mt-1">
                 <span className="w-1 h-1 rounded-full bg-[#C59B3F]"></span>
-                <span className="text-[10px] text-[#E2E8F0] font-medium tracking-wide">
+                <span className="text-[11.5px] text-[#E2E8F0] font-medium tracking-wide">
                   Learn • Grow • Earn
                 </span>
               </div>
@@ -90,7 +90,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
           </div>
 
           {/* Golden Shield Check Award Center */}
-          <div className="absolute left-1/2 -translate-x-1/2 top-2 flex flex-col items-center">
+          <div className="absolute left-[55%] -translate-x-1/2 top-2 flex flex-col items-center">
             <div className="relative w-16 h-16 flex items-center justify-center">
               {/* Shield Ring glowing */}
               <div className="absolute inset-0 rounded-full bg-[#C59B3F]/10 blur-md animate-pulse"></div>
@@ -118,7 +118,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
             </div>
 
             <div className="flex flex-col mt-2 items-end">
-              <span className="text-[10px] text-slate-200 font-extrabold tracking-wider">
+              <span className="text-[11.5px] text-slate-200 font-extrabold tracking-wider">
                 INVOICE / RECEIPT
               </span>
               <span className="text-xs text-white font-black mt-1 flex items-center gap-1.5 justify-end">
@@ -155,15 +155,15 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
               </svg>
             </div>
             <div className="flex flex-col">
-              <span className="text-[#042F1A] font-black text-[15px] tracking-tight">
+              <span className="text-[#042F1A] font-black text-[17px] tracking-tight">
                 Activation Successful
               </span>
-              <span className="text-[#0A1D37] text-[10.5px] font-black uppercase tracking-wider">
+              <span className="text-[#0A1D37] text-[12px] font-black uppercase tracking-wider">
                 System Verified ID
               </span>
             </div>
           </div>
-          <div className="bg-[#D1FAE5] border border-[#10B981]/50 text-[#065F46] text-[10px] font-black px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
+          <div className="bg-[#D1FAE5] border border-[#10B981]/50 text-[#065F46] text-[11.5px] font-black px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
             <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse"></span>
             ACTIVE
           </div>
@@ -182,7 +182,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
                   <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
                   <path d="M21 12c0 1.2-4.03 6-9 6s-9-4.8-9-6c0-1.2 4.03-6 9-6s9 4.8 9 6z" />
                 </svg>
-                <span className="text-[11.5px] font-black tracking-wide text-white whitespace-nowrap">Status</span>
+                <span className="text-[12.5px] font-black tracking-wide text-white whitespace-nowrap">Status</span>
               </div>
               <div className="w-[64%] bg-white px-4 py-2.5 flex items-center">
                 <span className="inline-flex items-center gap-1.5 bg-emerald-50 border-2 border-emerald-500/40 px-3 py-1 rounded-full text-[12.5px] font-black text-emerald-700 shadow-sm">
@@ -199,10 +199,10 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
                   <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
                   <circle cx="12" cy="7" r="4" />
                 </svg>
-                <span className="text-[11.5px] font-black tracking-wide text-white whitespace-nowrap">ID Holder</span>
+                <span className="text-[12.5px] font-black tracking-wide text-white whitespace-nowrap">ID Holder</span>
               </div>
               <div className="w-[64%] bg-white px-4 py-2.5 flex items-center gap-2 overflow-hidden">
-                <span className="text-[#0A1D37] font-black text-[16px] tracking-tight truncate">{name}</span>
+                <span className="text-[#0A1D37] font-black text-[18px] tracking-tight truncate">{name}</span>
                 <span className="w-5 h-5 rounded-full bg-[#1E40AF] flex items-center justify-center text-white p-0.5 shadow-sm flex-shrink-0">
                   <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-none stroke-current" strokeWidth="4">
                     <polyline points="20 6 9 17 4 12" />
@@ -218,10 +218,10 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
                   <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                   <polyline points="22,6 12,13 2,6" />
                 </svg>
-                <span className="text-[11.5px] font-black tracking-wide text-white whitespace-nowrap">Email ID</span>
+                <span className="text-[12.5px] font-black tracking-wide text-white whitespace-nowrap">Email ID</span>
               </div>
               <div className="w-[64%] bg-white px-4 py-2.5 flex items-center overflow-hidden">
-                <span className="text-slate-900 font-extrabold text-[13.5px] break-all truncate">{email}</span>
+                <span className="text-slate-900 font-extrabold text-[15.5px] break-all truncate">{email}</span>
               </div>
             </div>
 
@@ -231,10 +231,10 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
                 <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#C59B3F] fill-none stroke-current" strokeWidth="2.5">
                   <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z" />
                 </svg>
-                <span className="text-[11.5px] font-black tracking-wide text-white whitespace-nowrap">Phone</span>
+                <span className="text-[12.5px] font-black tracking-wide text-white whitespace-nowrap">Phone</span>
               </div>
               <div className="w-[64%] bg-white px-4 py-2.5 flex items-center">
-                <span className="text-slate-900 font-extrabold text-[13.5px] tracking-wide">{phone}</span>
+                <span className="text-slate-900 font-extrabold text-[15.5px] tracking-wide">{phone}</span>
               </div>
             </div>
 
@@ -247,10 +247,10 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
                   <line x1="8" y1="2" x2="8" y2="4" />
                   <line x1="3" y1="10" x2="21" y2="10" />
                 </svg>
-                <span className="text-[11.5px] font-black tracking-wide text-white whitespace-nowrap">Student ID</span>
+                <span className="text-[12.5px] font-black tracking-wide text-white whitespace-nowrap">Student ID</span>
               </div>
               <div className="w-[64%] bg-white px-4 py-2.5 flex items-center">
-                <span className="text-slate-900 font-extrabold text-[13.5px] tracking-widest">{referralCode}</span>
+                <span className="text-slate-900 font-extrabold text-[15.5px] tracking-widest">{referralCode}</span>
               </div>
             </div>
 
@@ -263,7 +263,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
                   <path d="M23 21v-2a4 4 0 00-3-3.87" />
                   <path d="M16 3.13a4 4 0 010 7.75" />
                 </svg>
-                <span className="text-[11.5px] font-black tracking-wide text-white whitespace-nowrap">Team Code</span>
+                <span className="text-[12.5px] font-black tracking-wide text-white whitespace-nowrap">Team Code</span>
               </div>
               <div className="w-[64%] bg-white px-4 py-2.5 flex items-center">
                 <span className="text-[#1E40AF] font-black text-[14.5px] tracking-wider">{teamCode}</span>
@@ -319,8 +319,8 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
                   <path d="M 60,56 L 60,70" fill="none" stroke="url(#goldGrad)" strokeWidth="2.5" />
                 </svg>
                 {/* Decorative tiny stars floating around */}
-                <span className="absolute top-2 left-4 text-[#FBBF24] text-[10px] animate-pulse">✦</span>
-                <span className="absolute top-5 right-3 text-[#FBBF24] text-[11px] animate-pulse delay-75">✦</span>
+                <span className="absolute top-2 left-4 text-[#FBBF24] text-[11.5px] animate-pulse">✦</span>
+                <span className="absolute top-5 right-3 text-[#FBBF24] text-[12px] animate-pulse delay-75">✦</span>
               </div>
             )}
 
@@ -406,10 +406,10 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
               <span className="font-serif italic font-black text-xl text-[#03543F] leading-none mb-1">
                 Thank You!
               </span>
-              <p className="text-[11px] text-slate-900 font-black leading-normal">
+              <p className="text-[12px] text-slate-900 font-black leading-normal">
                 We appreciate your trust in <span className="text-[#03543F]">{companyName}</span>.
               </p>
-              <p className="text-[10px] text-slate-800 font-extrabold leading-normal">
+              <p className="text-[11.5px] text-slate-800 font-extrabold leading-normal">
                 Keep learning, keep earning.
               </p>
             </div>
@@ -458,7 +458,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
                 <path d="M9 11l2 2 4-4" />
               </svg>
             </div>
-            <p className="text-[14px] text-[#0A2540] font-black leading-snug">
+            <p className="text-[15.5px] text-[#0A2540] font-black leading-snug">
               {companyName} ই-লার্নিং প্ল্যাটফর্মে আপনার আইডি সফলভাবে সক্রিয় হয়েছে।
             </p>
           </div>
@@ -472,7 +472,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
                 <line x1="12" y1="16" x2="12" y2="16" />
               </svg>
             </div>
-            <p className="text-[14px] text-[#7A0D0D] font-black leading-snug">
+            <p className="text-[15.5px] text-[#7A0D0D] font-black leading-snug">
               আপনার অ্যাকাউন্টের পাসওয়ার্ড সুরক্ষিত রাখুন, পাসওয়ার্ড কাউকে শেয়ার করবেন না।
             </p>
           </div>
@@ -486,7 +486,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
           <span className="text-[8.5px] text-slate-500 font-black tracking-wider uppercase">
             TRANSACTION ID
           </span>
-          <span className="text-[13px] font-mono font-black text-[#0A1D37] mt-0.5 tracking-wide">
+          <span className="text-[14.5px] font-mono font-black text-[#0A1D37] mt-0.5 tracking-wide">
             #{transactionId}
           </span>
           {/* Beautiful flowing handwritten ink signature */}
@@ -540,7 +540,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
             href={`https://${companyWebsite}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[11px] font-black text-[#0A1D37] hover:underline mt-0.5"
+            className="text-[12px] font-black text-[#0A1D37] hover:underline mt-0.5"
           >
             {companyWebsite}
           </a>
@@ -585,7 +585,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
         </div>
         <div className="flex items-center gap-0.5">
           <span>Your Success, Our Priority</span>
-          <span className="text-[#C59B3F] text-[10px] animate-pulse">💛</span>
+          <span className="text-[#C59B3F] text-[11.5px] animate-pulse">💛</span>
         </div>
       </div>
     </div>
