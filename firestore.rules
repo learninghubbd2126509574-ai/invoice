@@ -1,0 +1,29 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net (default deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper to validate IDs
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Invoices collection rules
+    match /invoices/{invoiceId} {
+      // Allow retrieval by exact ID for invoice verification
+      allow get: if isValidId(invoiceId);
+
+      // Allow creating and updating invoices
+      allow create, update: if isValidId(invoiceId);
+
+      // Allow deletion for admin/clearing functions
+      allow delete: if isValidId(invoiceId);
+
+      // Allow blanket collection listings for clearing functions and verified listings
+      allow list: if true;
+    }
+  }
+}

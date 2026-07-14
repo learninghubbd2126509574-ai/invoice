@@ -1,0 +1,6 @@
+{
+  "name": "E-Learning Invoice Generator",
+  "description": "Generate, verify and download highly polished, professional activation invoices and receipts with direct database verification.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
