@@ -371,23 +371,6 @@ export default function App() {
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
                   <span className="text-xs text-emerald-300 font-extrabold uppercase tracking-widest">Verified ID Receipt</span>
                 </div>
-                <button
-                  onClick={() => handleDownloadHD(verifiedData?.name || "verified_receipt")}
-                  disabled={downloading}
-                  className="bg-emerald-500 hover:bg-emerald-600 text-white py-2 px-4 rounded-xl text-xs font-black transition flex items-center gap-1.5 shadow-md active:scale-95 disabled:opacity-50"
-                >
-                  {downloading ? (
-                    <>
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      ডাউনলোড হচ্ছে...
-                    </>
-                  ) : (
-                    <>
-                      <Download className="w-3.5 h-3.5" />
-                      ডাউনলোড করুন (Download)
-                    </>
-                  )}
-                </button>
               </div>
 
               {/* Beautiful text-based details view */}
