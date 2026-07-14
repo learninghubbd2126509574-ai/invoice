@@ -156,6 +156,18 @@ export default function App() {
     setIsLookupLoading(true);
     setLookupError(null);
     try {
+      if (id.startsWith("data_")) {
+        try {
+          const decodedStr = decodeURIComponent(atob(id.replace("data_", "")));
+          const decodedData = JSON.parse(decodedStr);
+          setVerifiedData(decodedData);
+          setIsLookupLoading(false);
+          return;
+        } catch (e) {
+          throw new Error("ভুল বা ইনভ্যালিড লিংক ডাটা!");
+        }
+      }
+
       const response = await fetch(`/api/invoices/${id}`);
       if (!response.ok) {
         throw new Error("ভেরিফিকেশন আইডি পাওয়া যায়নি অথবা ডাটাবেজে রেকর্ডটি নেই!");
@@ -199,9 +211,25 @@ export default function App() {
       setIsSaving(false);
       return result.id;
     } catch (err) {
-      console.error("Save error:", err);
+      console.warn("Backend save failed, using fallback URL encoding.", err);
+      const uniqueId = "inv_" + Math.random().toString(36).substring(2, 15);
+      const updatedData = {
+        ...invoiceData,
+        id: uniqueId,
+      };
+      const dataToEncode = { ...updatedData };
+      if (dataToEncode.logoUrl && dataToEncode.logoUrl.startsWith("data:image")) {
+        delete dataToEncode.logoUrl;
+      }
+      if (dataToEncode.avatarUrl && dataToEncode.avatarUrl.startsWith("data:image")) {
+        delete dataToEncode.avatarUrl;
+      }
+      const encodedData = btoa(encodeURIComponent(JSON.stringify(dataToEncode)));
+      const fallbackId = `data_${encodedData}`;
+      setGeneratedId(fallbackId);
+      setInvoiceData(updatedData);
       setIsSaving(false);
-      throw err;
+      return fallbackId;
     }
   };
 

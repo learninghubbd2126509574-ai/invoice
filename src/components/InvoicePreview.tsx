@@ -73,7 +73,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
               )}
             </div>
 
-            <div className="flex flex-col max-w-[180px] text-left">
+            <div className="flex flex-col max-w-[220px] text-left">
               <h1 className="text-xl font-black tracking-tight text-white leading-tight break-words">
                 {companyName.toUpperCase()}
               </h1>
