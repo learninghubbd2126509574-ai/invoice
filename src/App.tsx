@@ -2,25 +2,52 @@ import React, { useState, useEffect, useRef } from "react";
 import { InvoiceData } from "./types";
 import { AdminPanel } from "./components/AdminPanel";
 import { InvoicePreview } from "./components/InvoicePreview";
-import { ShieldCheck, Database, HelpCircle, Download, CheckCircle, RefreshCw, AlertCircle, Copy, Check, ExternalLink, ArrowLeft, Trash2 } from "lucide-react";
+import { PaymentMethodLogo } from "./components/BrandLogos";
+import { getTodayFormattedDate } from "./utils/dateUtils";
+import {
+  ShieldCheck,
+  Database,
+  HelpCircle,
+  Download,
+  CheckCircle,
+  RefreshCw,
+  AlertCircle,
+  Copy,
+  Check,
+  ExternalLink,
+  ArrowLeft,
+  Trash2,
+  User,
+  Mail,
+  Phone,
+  Hash,
+  Users,
+  Award,
+  CreditCard,
+  Calendar,
+  Eye,
+  Sparkles,
+} from "lucide-react";
 import { toPng } from "html-to-image";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "./lib/firebase";
 
 const DEFAULT_INVOICE_DATA: InvoiceData = {
   id: "",
-  name: "",
-  email: "",
-  phone: "",
+  name: "Minhaz Ahmed",
+  email: "minhaz960@gmail.com",
+  phone: "01863091123",
   referralCode: "4845156",
   teamCode: "336251",
+  teamLeader: "Sabbir Ahmed",
+  teamTrainer: "Nafis Iqbal",
   cashback: "300",
   amountPaid: "599",
   paymentMethod: "Bkash",
   companyName: "Unity Earning",
   companyWebsite: "www.unityearning.com",
   transactionId: "TR-608C9-654",
-  date: "July 13, 2026",
+  date: getTodayFormattedDate(),
 };
 
 const ScaleWrapper = ({ children, maxWidth = 330 }: { children: React.ReactNode; maxWidth?: number }) => {
@@ -31,7 +58,6 @@ const ScaleWrapper = ({ children, maxWidth = 330 }: { children: React.ReactNode;
     const handleResize = () => {
       if (containerRef.current) {
         const parentWidth = containerRef.current.parentElement?.clientWidth || maxWidth;
-        // Restrict to max maxWidth display width
         const availableWidth = Math.min(parentWidth - 8, maxWidth);
         const currentScale = availableWidth / 640;
         setScale(currentScale);
@@ -48,9 +74,9 @@ const ScaleWrapper = ({ children, maxWidth = 330 }: { children: React.ReactNode;
       <div
         style={{
           width: `${640 * scale}px`,
-          height: `${1060 * scale}px`,
+          height: `${1120 * scale}px`,
           overflow: "hidden",
-          position: "relative"
+          position: "relative",
         }}
         className="flex-shrink-0 transition-all duration-200 rounded-[1.8rem]"
       >
@@ -59,10 +85,10 @@ const ScaleWrapper = ({ children, maxWidth = 330 }: { children: React.ReactNode;
             transform: `scale(${scale})`,
             transformOrigin: "top left",
             width: "640px",
-            height: "1060px",
+            height: "1120px",
             position: "absolute",
             top: 0,
-            left: 0
+            left: 0,
           }}
         >
           {children}
@@ -73,21 +99,36 @@ const ScaleWrapper = ({ children, maxWidth = 330 }: { children: React.ReactNode;
 };
 
 export default function App() {
-  const [invoiceData, setInvoiceData] = useState<InvoiceData>(DEFAULT_INVOICE_DATA);
+  const [invoiceData, setInvoiceData] = useState<InvoiceData>(() => {
+    let savedTr = "";
+    let savedTl = "";
+    try {
+      savedTr = localStorage.getItem("last_selected_team_trainer") || "";
+      savedTl = localStorage.getItem("last_selected_team_leader") || "";
+    } catch (e) {
+      console.error(e);
+    }
+    return {
+      ...DEFAULT_INVOICE_DATA,
+      teamTrainer: savedTr || DEFAULT_INVOICE_DATA.teamTrainer || "Nafis Iqbal",
+      teamLeader: savedTl || DEFAULT_INVOICE_DATA.teamLeader || "Sabbir Ahmed",
+      date: getTodayFormattedDate(),
+    };
+  });
   const [isSaving, setIsSaving] = useState(false);
   const [generatedId, setGeneratedId] = useState<string | null>(null);
   const [verificationId, setVerificationId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  
+
   // Verification lookup states
   const [verifiedData, setVerifiedData] = useState<InvoiceData | null>(null);
   const [isLookupLoading, setIsLookupLoading] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
-  const [downloadingVerified, setDownloadingVerified] = useState(false);
+  const [showFullGraphicReceipt, setShowFullGraphicReceipt] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
-  const [phoneScale, setPhoneScale] = useState<number>(0.42); // Default to a beautifully zoomed-out scale to fit perfectly on standard screen sizes.
-  
-  // Custom dialogs/notifications for smooth iframe-friendly UX
+  const [phoneScale, setPhoneScale] = useState<number>(0.42);
+
+  // Custom dialogs/notifications
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
 
@@ -109,14 +150,18 @@ export default function App() {
     setIsClearing(true);
     try {
       const response = await fetch("/api/clear-database", {
-        method: "POST"
+        method: "POST",
       });
       if (!response.ok) {
         throw new Error("ডাটা ক্লিয়ার করতে সমস্যা হয়েছে!");
       }
       showToast("ডাটাবেজ সফলভাবে সম্পূর্ণ ক্লিয়ার করা হয়েছে!", "success");
-      // Reset state if cleared
-      setInvoiceData(DEFAULT_INVOICE_DATA);
+      setInvoiceData((prev) => ({
+        ...DEFAULT_INVOICE_DATA,
+        teamTrainer: prev.teamTrainer || localStorage.getItem("last_selected_team_trainer") || "Nafis Iqbal",
+        teamLeader: prev.teamLeader || localStorage.getItem("last_selected_team_leader") || "Sabbir Ahmed",
+        date: getTodayFormattedDate(),
+      }));
       setGeneratedId(null);
     } catch (err: any) {
       console.error(err);
@@ -130,7 +175,7 @@ export default function App() {
   useEffect(() => {
     const savedLogo = localStorage.getItem("company_logo");
     if (savedLogo) {
-      setInvoiceData(prev => ({ ...prev, logoUrl: savedLogo }));
+      setInvoiceData((prev) => ({ ...prev, logoUrl: savedLogo }));
     }
   }, []);
 
@@ -202,15 +247,14 @@ export default function App() {
   const handleSaveInvoice = async (): Promise<string> => {
     setIsSaving(true);
     try {
-      // Create a unique ID if not present
       const uniqueId = "inv_" + Math.random().toString(36).substring(2, 15);
       const updatedData = {
         ...invoiceData,
         id: uniqueId,
+        date: invoiceData.date || getTodayFormattedDate(),
         createdAt: new Date().toISOString(),
       };
 
-      // Try saving to Firebase directly (for static hosts like Vercel)
       let savedDirectly = false;
       try {
         await setDoc(doc(db, "invoices", uniqueId), updatedData);
@@ -219,7 +263,6 @@ export default function App() {
         console.warn("Firebase direct save failed", fbError);
       }
 
-      // If we couldn't save directly, or just as a fallback/sync, try the backend API
       if (!savedDirectly) {
         const response = await fetch("/api/invoices", {
           method: "POST",
@@ -244,6 +287,7 @@ export default function App() {
       const updatedData = {
         ...invoiceData,
         id: uniqueId,
+        date: invoiceData.date || getTodayFormattedDate(),
       };
       const dataToEncode = { ...updatedData };
       if (dataToEncode.logoUrl && dataToEncode.logoUrl.startsWith("data:image")) {
@@ -289,61 +333,45 @@ export default function App() {
     }
   };
 
-  const formatCreatedAtEn = (isoString?: string) => {
-    if (!isoString) return "N/A";
-    try {
-      const dateObj = new Date(isoString);
-      return dateObj.toLocaleString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      });
-    } catch (err) {
-      return isoString;
-    }
-  };
-
   // --- RENDER 1: VERIFICATION PORTAL VIEW (?id=...) ---
+  // The user requested: "এখানে যে ডাউনলোড অপশনটা দিছে এখানে দেওয়ার দরকার নেই এখানে ডাটা গুলো দেখা যাবে"
   if (verificationId) {
     return (
-      <div className="min-h-screen bg-gradient-to-tr from-[#0F172A] via-[#1E293B] to-[#0F172A] py-10 px-4 text-white flex flex-col items-center justify-center font-sans">
-        <div className="w-full max-w-4xl flex flex-col items-center gap-8">
+      <div className="min-h-screen bg-gradient-to-br from-[#0A192F] via-[#0F2847] to-[#0A192F] py-8 px-4 text-white flex flex-col items-center justify-center font-sans">
+        <div className="w-full max-w-xl flex flex-col items-center gap-6">
           {/* Top Logo and verification banner */}
-          <div className="flex flex-col items-center text-center gap-3">
+          <div className="flex flex-col items-center text-center gap-2">
             <div className="relative">
               <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full"></div>
-              <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 border border-blue-400/30 flex items-center justify-center shadow-lg">
-                <Database className="w-8 h-8 text-blue-100" />
+              <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#0F4C81] to-[#1E3A8A] border-2 border-[#C59B3F]/70 flex items-center justify-center shadow-lg">
+                <ShieldCheck className="w-7 h-7 text-[#C59B3F]" />
               </div>
             </div>
             <div>
-              <h1 className="text-2xl font-black tracking-tight flex items-center gap-2 justify-center">
-                অফিসিয়াল পেমেন্ট ভেরিফিকেশন পোর্টাল
+              <h1 className="text-xl font-black tracking-tight text-white flex items-center gap-2 justify-center">
+                অফিসিয়াল অ্যাকাউন্ট ভেরিফিকেশন রিপোর্ট
               </h1>
-              <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mt-1">
-                Official E-Learning Platform Payment Verification Database
+              <p className="text-[11px] text-sky-300/80 font-bold uppercase tracking-widest mt-0.5">
+                Official E-Learning Platform Verification Portal
               </p>
             </div>
           </div>
 
           {/* LOADING STATE */}
           {isLookupLoading && (
-            <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-10 flex flex-col items-center justify-center gap-4 text-center max-w-md shadow-2xl relative overflow-hidden">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-indigo-500 animate-pulse"></div>
-              <RefreshCw className="w-10 h-10 text-blue-500 animate-spin" />
+            <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-10 flex flex-col items-center justify-center gap-4 text-center max-w-md shadow-2xl relative overflow-hidden w-full">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-amber-400 to-indigo-500 animate-pulse"></div>
+              <RefreshCw className="w-10 h-10 text-amber-400 animate-spin" />
               <div>
                 <h3 className="font-bold text-base text-slate-100">ডাটাবেজে সার্চ হচ্ছে...</h3>
-                <p className="text-xs text-slate-400 mt-1">অনুগ্রহ করে কয়েক সেকেন্ড অপেক্ষা করুন, পেমেন্ট রেকর্ড যাচাই করা হচ্ছে।</p>
+                <p className="text-xs text-slate-400 mt-1">অনুগ্রহ করে কয়েক সেকেন্ড অপেক্ষা করুন, তথ্য যাচাই করা হচ্ছে।</p>
               </div>
             </div>
           )}
 
           {/* ERROR / NOT FOUND STATE */}
           {lookupError && (
-            <div className="bg-slate-900/80 border border-red-950/40 rounded-3xl p-10 flex flex-col items-center justify-center gap-4 text-center max-w-md shadow-2xl relative overflow-hidden">
+            <div className="bg-slate-900/90 border border-red-950/40 rounded-3xl p-10 flex flex-col items-center justify-center gap-4 text-center max-w-md shadow-2xl relative overflow-hidden w-full">
               <div className="absolute top-0 left-0 right-0 h-1 bg-red-600"></div>
               <div className="w-14 h-14 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400">
                 <AlertCircle className="w-8 h-8" />
@@ -356,71 +384,214 @@ export default function App() {
                 href="/"
                 className="mt-2 bg-slate-800 hover:bg-slate-700 text-white font-bold py-2 px-6 rounded-xl text-xs transition"
               >
-                নতুন ইনভয়েস তৈরি করুন
+                মূল পাতায় ফিরে যান
               </a>
             </div>
           )}
 
-          {/* VERIFIED SUCCESS DATA VIEW */}
+          {/* VERIFIED SUCCESS DATA VIEW (NO DOWNLOAD BUTTON AS REQUESTED) */}
           {verifiedData && !isLookupLoading && (
-            <div className="flex flex-col items-center gap-6 w-full animate-fade-in-up">
-              
-              {/* Top Download Header Bar */}
-              <div className="w-full max-w-sm bg-emerald-950/60 border border-emerald-500/30 p-3 px-4 rounded-2xl flex items-center justify-between shadow-xl">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                  <span className="text-xs text-emerald-300 font-extrabold uppercase tracking-widest">Verified ID Receipt</span>
+            <div className="flex flex-col items-center gap-5 w-full animate-fade-in-up">
+              {/* Top Verified Header Status Ribbon */}
+              <div className="w-full bg-gradient-to-r from-emerald-950/80 via-[#0B2545]/90 to-emerald-950/80 border border-emerald-500/40 p-4 rounded-3xl flex items-center justify-between shadow-xl">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20 flex-shrink-0">
+                    <Check className="w-6 h-6 stroke-[3]" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-black text-white">অ্যাকাউন্ট ভেরিফায়েড ও সক্রিয়</span>
+                    <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">
+                      Official Active Member ID
+                    </span>
+                  </div>
+                </div>
+                <div className="bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 text-xs font-black px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  ACTIVE
                 </div>
               </div>
 
-              {/* Beautiful text-based details view */}
-              <div className="w-full max-w-[500px] bg-slate-900 border border-slate-800 rounded-[2rem] p-6 shadow-2xl mb-4 relative overflow-hidden">
-                {/* Decorative background glow */}
-                <div className="absolute -top-24 -right-24 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl"></div>
-                <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl"></div>
-                
-                <div className="relative z-10 flex flex-col items-center gap-4 border-b border-slate-800 pb-6 mb-6">
-                  {verifiedData.logoUrl ? (
-                    <img src={verifiedData.logoUrl} alt="Logo" className="w-20 h-20 object-contain rounded-full border-2 border-slate-700 bg-white p-1 shadow-lg" referrerPolicy="no-referrer" />
-                  ) : (
-                    <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-[#0F4C81] to-[#1E3A8A] flex items-center justify-center shadow-lg border-2 border-slate-700">
-                      <ShieldCheck className="w-10 h-10 text-emerald-400" />
+              {/* Complete Professional Details Card */}
+              <div className="w-full bg-slate-900/95 border border-slate-800/90 rounded-[2rem] p-6 shadow-2xl relative overflow-hidden backdrop-blur-md">
+                <div className="absolute -top-24 -right-24 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+                {/* Company Branding & Logo */}
+                <div className="relative z-10 flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+                  <div className="flex items-center gap-3">
+                    {verifiedData.logoUrl ? (
+                      <img
+                        src={verifiedData.logoUrl}
+                        alt="Logo"
+                        className="w-14 h-14 object-contain rounded-2xl border border-[#C59B3F]/40 bg-white p-1 shadow-md"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#0F4C81] to-[#1E3A8A] flex items-center justify-center shadow-md border-2 border-[#C59B3F]">
+                        <ShieldCheck className="w-8 h-8 text-[#C59B3F]" />
+                      </div>
+                    )}
+                    <div>
+                      <h2 className="text-lg font-black text-white tracking-wide">
+                        {verifiedData.companyName.toUpperCase()}
+                      </h2>
+                      <span className="text-[11px] text-sky-400 font-extrabold tracking-wider">
+                        E-LEARNING PLATFORM
+                      </span>
                     </div>
-                  )}
-                  <div className="text-center">
-                    <h2 className="text-xl font-black text-white tracking-wide">{verifiedData.companyName.toUpperCase()}</h2>
-                    <p className="text-[11px] text-emerald-400 font-bold mt-1 tracking-widest uppercase">Account Activated</p>
+                  </div>
+
+                  <div className="text-right">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">তারিখ</span>
+                    <span className="text-xs text-amber-300 font-black flex items-center gap-1 justify-end mt-0.5">
+                      <Calendar className="w-3 h-3" />
+                      {verifiedData.date}
+                    </span>
                   </div>
                 </div>
 
-                <div className="relative z-10 flex flex-col gap-1">
-                  {[
-                    { label: "Name", value: verifiedData.name },
-                    { label: "Email", value: verifiedData.email },
-                    { label: "Phone", value: verifiedData.phone },
-                    { label: "Student ID", value: verifiedData.referralCode },
-                    { label: "Team Code", value: verifiedData.teamCode },
-                    { label: "Cashback", value: `৳${verifiedData.cashback}` },
-                    { label: "Amount Paid", value: `৳${verifiedData.amountPaid}` },
-                    { label: "Payment Method", value: verifiedData.paymentMethod },
-                    { label: "Date", value: verifiedData.date },
-                    { label: "Verification ID", value: verifiedData.id },
-                  ].map((item, idx) => (
-                    <div key={idx} className="flex justify-between items-center py-2.5 border-b border-slate-800/50 last:border-0">
-                      <span className="text-slate-400 font-semibold text-[13px]">{item.label}</span>
-                      <span className="text-slate-100 font-bold text-[13px] text-right max-w-[60%] break-words">{item.value || "-"}</span>
+                {/* 1. Student / Member Info Rows */}
+                <div className="relative z-10 flex flex-col divide-y divide-slate-800/70">
+                  <div className="flex justify-between items-center py-2.5">
+                    <span className="text-slate-400 font-bold text-xs flex items-center gap-2">
+                      <User className="w-3.5 h-3.5 text-sky-400" />
+                      শিক্ষার্থীর নাম (ID Holder)
+                    </span>
+                    <span className="text-white font-black text-sm text-right">{verifiedData.name || "-"}</span>
+                  </div>
+
+                  <div className="flex justify-between items-center py-2.5">
+                    <span className="text-slate-400 font-bold text-xs flex items-center gap-2">
+                      <Mail className="w-3.5 h-3.5 text-sky-400" />
+                      ইমেইল (Email ID)
+                    </span>
+                    <span className="text-slate-200 font-bold text-xs text-right break-all">
+                      {verifiedData.email || "-"}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center py-2.5">
+                    <span className="text-slate-400 font-bold text-xs flex items-center gap-2">
+                      <Phone className="w-3.5 h-3.5 text-sky-400" />
+                      ফোন নাম্বার (Phone)
+                    </span>
+                    <span className="text-slate-200 font-bold text-xs text-right">{verifiedData.phone || "-"}</span>
+                  </div>
+
+                  <div className="flex justify-between items-center py-2.5">
+                    <span className="text-slate-400 font-bold text-xs flex items-center gap-2">
+                      <Hash className="w-3.5 h-3.5 text-sky-400" />
+                      স্টুডেন্ট আইডি (Student ID)
+                    </span>
+                    <span className="text-amber-300 font-mono font-black text-xs text-right">
+                      {verifiedData.referralCode || "-"}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center py-2.5">
+                    <span className="text-slate-400 font-bold text-xs flex items-center gap-2">
+                      <Users className="w-3.5 h-3.5 text-sky-400" />
+                      টিম কোড (Team Code)
+                    </span>
+                    <span className="text-sky-300 font-mono font-black text-xs text-right">
+                      {verifiedData.teamCode || "-"}
+                    </span>
+                  </div>
+
+                  {/* Team Leader (TL) */}
+                  <div className="flex justify-between items-center py-2.5 bg-blue-950/20 px-2 rounded-xl">
+                    <span className="text-amber-300 font-black text-xs flex items-center gap-2">
+                      <Award className="w-3.5 h-3.5 text-amber-400" />
+                      টিম লিডার (Team Leader - TL)
+                    </span>
+                    <span className="text-white font-black text-xs text-right">
+                      {verifiedData.teamLeader || "N/A"}
+                    </span>
+                  </div>
+
+                  {/* Team Trainer (TR) */}
+                  <div className="flex justify-between items-center py-2.5 bg-blue-950/20 px-2 rounded-xl">
+                    <span className="text-amber-300 font-black text-xs flex items-center gap-2">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                      টিম ট্রেনার (Team Trainer - TR)
+                    </span>
+                    <span className="text-white font-black text-xs text-right">
+                      {verifiedData.teamTrainer || "N/A"}
+                    </span>
+                  </div>
+
+                  {/* Financial Details */}
+                  <div className="flex justify-between items-center py-2.5">
+                    <span className="text-slate-400 font-bold text-xs flex items-center gap-2">
+                      <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
+                      ক্যাশব্যাক (Cashback Received)
+                    </span>
+                    <span className="text-emerald-400 font-black text-sm text-right">
+                      ৳{verifiedData.cashback}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center py-2.5">
+                    <span className="text-slate-400 font-bold text-xs flex items-center gap-2">
+                      <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
+                      মোট পেমেন্ট (Amount Paid)
+                    </span>
+                    <span className="text-amber-400 font-black text-sm text-right">
+                      ৳{verifiedData.amountPaid}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center py-2.5">
+                    <span className="text-slate-400 font-bold text-xs flex items-center gap-2">
+                      পেমেন্ট মেথড (Payment Method)
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <PaymentMethodLogo method={verifiedData.paymentMethod} className="h-6" />
+                      <span className="text-slate-100 font-bold text-xs">{verifiedData.paymentMethod}</span>
                     </div>
-                  ))}
+                  </div>
+
+                  <div className="flex justify-between items-center py-2.5">
+                    <span className="text-slate-400 font-bold text-xs">ট্রানজেকশন আইডি (TxID)</span>
+                    <span className="text-slate-200 font-mono font-bold text-xs text-right">
+                      #{verifiedData.transactionId}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center py-2.5">
+                    <span className="text-slate-400 font-bold text-xs">ভেরিফিকেশন আইডি</span>
+                    <span className="text-slate-300 font-mono text-[11px] text-right truncate max-w-[200px]">
+                      {verifiedData.id}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Bengali encouragement message */}
+                <div className="mt-5 bg-emerald-950/40 border border-emerald-500/30 p-3.5 rounded-2xl text-center">
+                  <p className="text-xs font-black text-emerald-300 leading-relaxed">
+                    🎉 {verifiedData.companyName} ই-লার্নিং প্ল্যাটফর্মে আপনাকে স্বাগতম। আপনার অ্যাকাউন্টটি সফলভাবে সক্রিয় করা হয়েছে।
+                  </p>
                 </div>
               </div>
 
-              {/* Hidden invoice view just for downloading */}
-              <div className="fixed top-0 left-0 -z-50 opacity-0 pointer-events-none">
-                <ScaleWrapper maxWidth={640}>
-                  <InvoicePreview data={verifiedData} isSharedPage={true} />
-                </ScaleWrapper>
-              </div>
+              {/* Optional Visual Preview Toggle Button */}
+              <button
+                type="button"
+                onClick={() => setShowFullGraphicReceipt(!showFullGraphicReceipt)}
+                className="flex items-center gap-2 bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white px-4 py-2 rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer"
+              >
+                <Eye className="w-4 h-4 text-sky-400" />
+                {showFullGraphicReceipt ? "গ্রাফিক্যাল ইনভয়েস বন্ধ করুন" : "অফিসিয়াল গ্রাফিক্যাল ইনভয়েস দেখুন"}
+              </button>
 
+              {/* Full Graphic Invoice (Shown only if toggled) */}
+              {showFullGraphicReceipt && (
+                <div className="w-full flex justify-center mt-2 animate-fade-in">
+                  <ScaleWrapper maxWidth={420}>
+                    <InvoicePreview data={verifiedData} isSharedPage={true} />
+                  </ScaleWrapper>
+                </div>
+              )}
             </div>
           )}
 
@@ -445,10 +616,12 @@ export default function App() {
             </div>
             <div>
               <h1 className="font-black text-[15px] tracking-tight text-slate-900">E-LEARNING ACTIVATION PANEL</h1>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-0.5">Payment Receipt Management</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-0.5">
+                Payment Receipt & TL/TR Management
+              </p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-3">
             {/* Clear Database Button */}
             <button
@@ -460,9 +633,9 @@ export default function App() {
               {isClearing ? "ডাটা ক্লিয়ার হচ্ছে..." : "ডাটাবেজ ক্লিয়ার করুন"}
             </button>
 
-            <div className="flex items-center gap-3 bg-blue-50 border border-slate-100 px-3.5 py-1.5 rounded-full text-[11px] font-bold text-blue-700 shadow-inner">
+            <div className="hidden sm:flex items-center gap-2 bg-blue-50 border border-slate-100 px-3.5 py-1.5 rounded-full text-[11px] font-bold text-blue-700 shadow-inner">
               <Database className="w-3.5 h-3.5 animate-pulse" />
-              ফায়ারবেস লাইভ ডাটাবেজ সক্রিয় (Firebase Connected)
+              ফায়ারবেস ডাটাবেজ সক্রিয় (Firebase Live)
             </div>
           </div>
         </div>
@@ -471,7 +644,6 @@ export default function App() {
       {/* Main Grid content */}
       <main className="max-w-7xl mx-auto px-6 mt-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
           {/* Left Block: Admin panel configurator (takes 5 cols) */}
           <div className="lg:col-span-5">
             <AdminPanel
@@ -524,10 +696,10 @@ export default function App() {
               {/* Quick Presets */}
               <div className="grid grid-cols-4 gap-2">
                 {[
-                  { label: "৩০% (ছোট)", value: 0.30 },
-                  { label: "৪০% (মিডিয়াম)", value: 0.40 },
-                  { label: "৫০% (বড়)", value: 0.50 },
-                  { label: "৬০% (ফুল)", value: 0.60 }
+                  { label: "৩০% (ছোট)", value: 0.3 },
+                  { label: "৪০% (মিডিয়াম)", value: 0.4 },
+                  { label: "৫০% (বড়)", value: 0.5 },
+                  { label: "৬০% (ফুল)", value: 0.6 },
                 ].map((preset) => (
                   <button
                     key={preset.value}
@@ -543,7 +715,7 @@ export default function App() {
                   </button>
                 ))}
               </div>
-              
+
               <div className="text-[9.5px] text-slate-500 text-center font-bold">
                 💡 আপনার স্ক্রিনের সাথে মেলাতে জুম এডজাস্ট করুন। পুরো ইনভয়েসের তথ্য ফ্রেমের ভেতরে দেখতে পাবেন এবং স্ক্রিনশট নিতে পারবেন।
               </div>
@@ -555,18 +727,18 @@ export default function App() {
               <div className="absolute top-3 left-1/2 -translate-x-1/2 w-20 h-4 bg-slate-950 rounded-full z-20 flex items-center justify-center border border-slate-800">
                 <div className="w-12 h-1 bg-slate-800 rounded-full"></div>
               </div>
-              
+
               {/* Camera Lens */}
               <div className="absolute top-3.5 left-1/3 w-3 h-3 bg-slate-950 rounded-full z-20 border border-slate-800"></div>
 
-              {/* Internal Screen Area containing dynamically scaled Invoice - 1250px height for complete fitting */}
+              {/* Internal Screen Area containing dynamically scaled Invoice - 1280px height for complete fitting */}
               <div className="rounded-[2.4rem] overflow-hidden bg-slate-950 border border-slate-950 p-1 flex justify-center items-center">
                 <div
                   style={{
                     width: `${640 * phoneScale}px`,
-                    height: `${1250 * phoneScale}px`,
+                    height: `${1280 * phoneScale}px`,
                     overflow: "hidden",
-                    position: "relative"
+                    position: "relative",
                   }}
                   className="flex-shrink-0 transition-all duration-200 rounded-[1.8rem]"
                 >
@@ -575,10 +747,10 @@ export default function App() {
                       transform: `scale(${phoneScale})`,
                       transformOrigin: "top left",
                       width: "640px",
-                      height: "1250px",
+                      height: "1280px",
                       position: "absolute",
                       top: 0,
-                      left: 0
+                      left: 0,
                     }}
                   >
                     <InvoicePreview data={invoiceData} />
@@ -603,15 +775,16 @@ export default function App() {
             {/* Back Button on Left */}
             <button
               onClick={() => setGeneratedId(null)}
-              className="text-slate-300 hover:text-white px-3.5 py-2 rounded-xl border border-slate-700/80 bg-slate-800/40 hover:bg-slate-800/80 text-xs font-extrabold flex items-center gap-1.5 transition active:scale-95"
+              className="text-slate-300 hover:text-white px-3.5 py-2 rounded-xl border border-slate-700/80 bg-slate-800/40 hover:bg-slate-800/80 text-xs font-extrabold flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
             >
-              ← ফিরে যান
+              <ArrowLeft className="w-3.5 h-3.5" />
+              ফিরে যান
             </button>
             {/* Download Button on Right */}
             <button
               onClick={() => handleDownloadHD(invoiceData.name || "unity_earning")}
               disabled={downloading}
-              className="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white py-2 px-4 rounded-xl text-xs font-black transition flex items-center gap-1.5 shadow-md active:scale-95 disabled:opacity-50"
+              className="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white py-2 px-4 rounded-xl text-xs font-black transition flex items-center gap-1.5 shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
             >
               {downloading ? (
                 <>
@@ -642,7 +815,7 @@ export default function App() {
                   Caption Template
                 </div>
               </div>
-              {`🎉 অভিনন্দন!\n\nUnity Earning E-Learning Platform-এ আপনার অ্যাকাউন্ট সফলভাবে অ্যাক্টিভ হয়েছে。\n\nআপনার অ্যাকাউন্টের বিস্তারিত দেখতে নিচের লিংকে ক্লিক করুন:\n👉 ${generatedId ? `${typeof window !== "undefined" ? window.location.href.split("?")[0] : ""}?id=${generatedId}` : ""}`}
+              {`🎉 অভিনন্দন!\n\nUnity Earning E-Learning Platform-এ আপনার অ্যাকাউন্ট সফলভাবে অ্যাক্টিভ হয়েছে।\n\nআপনার অ্যাকাউন্টের বিস্তারিত দেখতে নিচের লিংকে ক্লিক করুন:\n👉 ${generatedId ? `${typeof window !== "undefined" ? window.location.href.split("?")[0] : ""}?id=${generatedId}` : ""}`}
             </div>
             <button
               onClick={() => {
@@ -651,7 +824,7 @@ export default function App() {
                 setCopied(true);
                 setTimeout(() => setCopied(false), 2000);
               }}
-              className="mt-1 w-full bg-slate-800 hover:bg-slate-700 text-slate-200 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2"
+              className="mt-1 w-full bg-slate-800 hover:bg-slate-700 text-slate-200 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer"
             >
               {copied ? (
                 <>
@@ -673,7 +846,7 @@ export default function App() {
             <div className="absolute top-3 left-1/2 -translate-x-1/2 w-20 h-4 bg-slate-950 rounded-full z-20 flex items-center justify-center border border-slate-800">
               <div className="w-12 h-1 bg-slate-800 rounded-full"></div>
             </div>
-            
+
             {/* Camera Lens */}
             <div className="absolute top-3.5 left-1/3 w-3 h-3 bg-slate-950 rounded-full z-20 border border-slate-800"></div>
 
@@ -682,9 +855,9 @@ export default function App() {
               <div
                 style={{
                   width: `${640 * phoneScale}px`,
-                  height: `${1120 * phoneScale}px`,
+                  height: `${1280 * phoneScale}px`,
                   overflow: "hidden",
-                  position: "relative"
+                  position: "relative",
                 }}
                 className="flex-shrink-0 transition-all duration-200 rounded-[1.8rem]"
               >
@@ -693,10 +866,10 @@ export default function App() {
                     transform: `scale(${phoneScale})`,
                     transformOrigin: "top left",
                     width: "640px",
-                    height: "1120px",
+                    height: "1280px",
                     position: "absolute",
                     top: 0,
-                    left: 0
+                    left: 0,
                   }}
                 >
                   <InvoicePreview data={invoiceData} />
@@ -711,17 +884,18 @@ export default function App() {
       {showClearConfirm && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[1001] flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-slate-900 border border-slate-800/80 rounded-[2.5rem] p-6 max-w-md w-full shadow-2xl relative overflow-hidden text-slate-100 transform scale-100 transition-all duration-300">
-            {/* Top accent strip */}
             <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-red-500 via-orange-500 to-red-600"></div>
-            
+
             <div className="flex flex-col items-center text-center gap-4 mt-2">
               <div className="w-14 h-14 rounded-full bg-red-500/10 border border-red-500/25 flex items-center justify-center text-red-400">
                 <Trash2 className="w-7 h-7" />
               </div>
-              
+
               <div>
                 <h3 className="text-lg font-black tracking-tight text-white">ডাটাবেজ চিরতরে মুছুন?</h3>
-                <p className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-extrabold">Confirm Database Clearance</p>
+                <p className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-extrabold">
+                  Confirm Database Clearance
+                </p>
               </div>
 
               <p className="text-xs text-slate-300 font-bold bg-slate-950/50 p-4 rounded-2xl border border-slate-800/60 leading-relaxed">
@@ -759,9 +933,15 @@ export default function App() {
 
       {/* --- CUSTOM GLOWING TOAST NOTIFICATION --- */}
       {toast && (
-        <div className={`fixed bottom-6 right-6 z-[1002] animate-slide-in flex items-center gap-3 bg-slate-900/95 border border-slate-800/80 p-4 rounded-2xl shadow-2xl backdrop-blur-md max-w-sm text-slate-100 border-l-4 min-w-[280px] ${
-          toast.type === "success" ? "border-l-emerald-500" : toast.type === "error" ? "border-l-red-500" : "border-l-blue-500"
-        }`}>
+        <div
+          className={`fixed bottom-6 right-6 z-[1002] animate-slide-in flex items-center gap-3 bg-slate-900/95 border border-slate-800/80 p-4 rounded-2xl shadow-2xl backdrop-blur-md max-w-sm text-slate-100 border-l-4 min-w-[280px] ${
+            toast.type === "success"
+              ? "border-l-emerald-500"
+              : toast.type === "error"
+              ? "border-l-red-500"
+              : "border-l-blue-500"
+          }`}
+        >
           {toast.type === "success" && (
             <div className="w-8 h-8 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 flex-shrink-0">
               <Check className="w-4 h-4" />
@@ -777,7 +957,7 @@ export default function App() {
               <Database className="w-4 h-4 animate-pulse" />
             </div>
           )}
-          
+
           <div className="flex-1 min-w-0">
             <p className="text-xs font-black leading-tight">{toast.message}</p>
           </div>

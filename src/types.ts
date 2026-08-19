@@ -5,6 +5,8 @@ export interface InvoiceData {
   phone: string;
   referralCode: string;
   teamCode: string;
+  teamLeader?: string;
+  teamTrainer?: string;
   cashback: string;
   amountPaid: string;
   paymentMethod: "Bkash" | "Nagad" | "Rocket" | "Upay" | "Bank" | "Upi" | "Google pay";
