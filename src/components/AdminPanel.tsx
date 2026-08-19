@@ -17,6 +17,7 @@ import {
   Calendar,
   X,
   Award,
+  ExternalLink,
 } from "lucide-react";
 import { toPng } from "html-to-image";
 
@@ -576,8 +577,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             <label className="text-[11px] font-bold text-slate-500">পেমেন্ট মেথড (Payment Method)</label>
             <select
               value={initialData.paymentMethod}
-              onChange={(e) => onChange({ ...initialData, paymentMethod: e.target.value as any })}
-              className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500"
+              onChange={(e) => {
+                const selectedMethod = e.target.value as any;
+                onChange({ ...initialData, paymentMethod: selectedMethod });
+                try {
+                  localStorage.setItem("last_selected_payment_method", selectedMethod);
+                } catch (err) {
+                  console.error(err);
+                }
+              }}
+              className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 cursor-pointer"
             >
               <option value="Bkash">bKash (বিকাশ)</option>
               <option value="Nagad">Nagad (নগদ)</option>
@@ -748,29 +757,41 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               <label className="text-[10px] font-extrabold text-emerald-800 uppercase tracking-wider">
                 লাইভ ভেরিফিকেশন লিঙ্ক (Live Verification Link)
               </label>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <input
                   type="text"
                   readOnly
                   value={shareUrl}
                   className="flex-grow bg-white border border-emerald-200/50 rounded-xl px-3 py-2.5 text-xs font-semibold text-emerald-900 shadow-inner select-all outline-none"
                 />
-                <button
-                  onClick={handleCopyLink}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
-                >
-                  {copied ? (
-                    <>
-                      <Check className="w-4 h-4" />
-                      কপি হয়েছে
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-4 h-4" />
-                      লিঙ্ক কপি
-                    </>
-                  )}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleCopyLink}
+                    className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm active:scale-95 cursor-pointer whitespace-nowrap"
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="w-4 h-4" />
+                        কপি হয়েছে
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4" />
+                        লিঙ্ক কপি
+                      </>
+                    )}
+                  </button>
+                  <a
+                    href={shareUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm active:scale-95 cursor-pointer whitespace-nowrap"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    পেজ দেখুন (Open)
+                  </a>
+                </div>
               </div>
             </div>
 

@@ -102,14 +102,17 @@ export default function App() {
   const [invoiceData, setInvoiceData] = useState<InvoiceData>(() => {
     let savedTr = "";
     let savedTl = "";
+    let savedPaymentMethod: any = "";
     try {
       savedTr = localStorage.getItem("last_selected_team_trainer") || "";
       savedTl = localStorage.getItem("last_selected_team_leader") || "";
+      savedPaymentMethod = localStorage.getItem("last_selected_payment_method") || "";
     } catch (e) {
       console.error(e);
     }
     return {
       ...DEFAULT_INVOICE_DATA,
+      paymentMethod: savedPaymentMethod || DEFAULT_INVOICE_DATA.paymentMethod || "Bkash",
       teamTrainer: savedTr || DEFAULT_INVOICE_DATA.teamTrainer || "Nafis Iqbal",
       teamLeader: savedTl || DEFAULT_INVOICE_DATA.teamLeader || "Sabbir Ahmed",
       date: getTodayFormattedDate(),
@@ -247,7 +250,12 @@ export default function App() {
   const handleSaveInvoice = async (): Promise<string> => {
     setIsSaving(true);
     try {
-      const uniqueId = "inv_" + Math.random().toString(36).substring(2, 15);
+      // Generate clean, short ID (e.g. UE4845156 or INV782391)
+      const cleanShortCode = invoiceData.referralCode && invoiceData.referralCode.trim().length > 3
+        ? invoiceData.referralCode.trim()
+        : Math.floor(100000 + Math.random() * 900000).toString();
+      const uniqueId = `UE${cleanShortCode}`;
+      
       const updatedData = {
         ...invoiceData,
         id: uniqueId,
@@ -280,28 +288,36 @@ export default function App() {
       setGeneratedId(uniqueId);
       setInvoiceData(updatedData);
       setIsSaving(false);
+      showToast("ইনভয়েস সফলভাবে সেভ হয়েছে ও শর্ট লিঙ্ক তৈরি হয়েছে!", "success");
       return uniqueId;
     } catch (err) {
-      console.warn("Backend save failed, using fallback URL encoding.", err);
-      const uniqueId = "inv_" + Math.random().toString(36).substring(2, 15);
+      console.warn("Backend save issue, ensuring clean short ID is preserved.", err);
+      const cleanShortCode = invoiceData.referralCode && invoiceData.referralCode.trim().length > 3
+        ? invoiceData.referralCode.trim()
+        : Math.floor(100000 + Math.random() * 900000).toString();
+      const uniqueId = `UE${cleanShortCode}`;
       const updatedData = {
         ...invoiceData,
         id: uniqueId,
         date: invoiceData.date || getTodayFormattedDate(),
       };
-      const dataToEncode = { ...updatedData };
-      if (dataToEncode.logoUrl && dataToEncode.logoUrl.startsWith("data:image")) {
-        delete dataToEncode.logoUrl;
+      
+      // Try local server store fallback
+      try {
+        await fetch("/api/invoices", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(updatedData),
+        });
+      } catch (e) {
+        console.error("Local store backup error", e);
       }
-      if (dataToEncode.avatarUrl && dataToEncode.avatarUrl.startsWith("data:image")) {
-        delete dataToEncode.avatarUrl;
-      }
-      const encodedData = btoa(encodeURIComponent(JSON.stringify(dataToEncode)));
-      const fallbackId = `data_${encodedData}`;
-      setGeneratedId(fallbackId);
+
+      setGeneratedId(uniqueId);
       setInvoiceData(updatedData);
       setIsSaving(false);
-      return fallbackId;
+      showToast("ইনভয়েস লিঙ্ক প্রস্তুত হয়েছে!", "success");
+      return uniqueId;
     }
   };
 

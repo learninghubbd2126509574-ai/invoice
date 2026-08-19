@@ -40,22 +40,37 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
   return (
     <div
       id="invoice-capture-area"
-      className="w-[640px] bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-slate-100 flex flex-col font-sans select-none mx-auto relative p-0"
+      className="w-[640px] bg-[#F8FAFC] rounded-[2rem] shadow-2xl overflow-hidden border border-slate-200/90 flex flex-col font-sans select-none mx-auto relative p-0"
       style={{ minHeight: "1120px" }}
     >
       {/* 1. TOP HEADER BANNER */}
-      <div className="relative bg-gradient-to-r from-[#071E3D] via-[#0B2E5C] to-[#061B36] pt-7 pb-9 pl-7 pr-7 text-white border-b-4 border-[#C59B3F] rounded-t-[2rem] overflow-hidden">
-        {/* Subtle curved background lines */}
-        <div className="absolute inset-0 pointer-events-none opacity-25">
-          <svg viewBox="0 0 640 180" className="w-full h-full object-cover">
-            <path d="M 0 40 Q 320 140 640 40" fill="none" stroke="#C59B3F" strokeWidth="1.5" strokeDasharray="6 6" />
-            <path d="M 0 80 Q 320 180 640 80" fill="none" stroke="#38BDF8" strokeWidth="1" opacity="0.6" />
+      <div className="relative bg-[#041931] pt-7 pb-9 pl-7 pr-7 text-white border-b-4 border-[#C59B3F] rounded-t-[2rem] overflow-hidden">
+        {/* Luxury Micro Pattern Overlay */}
+        <div className="absolute inset-0 pointer-events-none opacity-20">
+          <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <pattern id="header-luxury-pattern" width="32" height="32" patternUnits="userSpaceOnUse">
+                {/* Micro tech/luxury grid with diamond & dot accents */}
+                <path d="M 32 0 L 0 32 M 0 0 L 32 32" fill="none" stroke="#C59B3F" strokeWidth="0.5" strokeOpacity="0.4" />
+                <circle cx="16" cy="16" r="1" fill="#38BDF8" fillOpacity="0.6" />
+                <circle cx="0" cy="0" r="1.2" fill="#E5B84B" fillOpacity="0.8" />
+                <circle cx="32" cy="0" r="1.2" fill="#E5B84B" fillOpacity="0.8" />
+                <circle cx="0" cy="32" r="1.2" fill="#E5B84B" fillOpacity="0.8" />
+                <circle cx="32" cy="32" r="1.2" fill="#E5B84B" fillOpacity="0.8" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#header-luxury-pattern)" />
           </svg>
         </div>
 
-        {/* Ambient background glow */}
-        <div className="absolute -top-16 left-1/4 w-48 h-48 bg-blue-500/15 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="absolute -top-16 right-1/4 w-48 h-48 bg-[#C59B3F]/15 rounded-full blur-3xl pointer-events-none"></div>
+        {/* Elegant Subtle Security Wave Lines across entire header */}
+        <div className="absolute inset-0 pointer-events-none opacity-25">
+          <svg viewBox="0 0 640 180" className="w-full h-full" preserveAspectRatio="none">
+            <path d="M 0 35 C 160 85, 480 -15, 640 45" fill="none" stroke="#C59B3F" strokeWidth="1" strokeDasharray="4 4" />
+            <path d="M 0 75 C 200 120, 440 20, 640 85" fill="none" stroke="#38BDF8" strokeWidth="1" strokeOpacity="0.6" />
+            <path d="M 0 115 C 220 150, 420 60, 640 125" fill="none" stroke="#C59B3F" strokeWidth="0.8" strokeDasharray="2 4" strokeOpacity="0.5" />
+          </svg>
+        </div>
 
         <div className="flex justify-between items-center relative z-10 w-full">
           {/* Left Block: Logo & Platform Info */}
@@ -80,9 +95,12 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
 
             {/* Typography */}
             <div className="flex flex-col text-left">
-              <h1 className="text-[18px] font-black tracking-tight text-white leading-tight uppercase drop-shadow-sm truncate">
-                {companyName || "UNITY EARNING"}
-              </h1>
+              <div className="flex items-center gap-1.5">
+                <h1 className="text-[18px] font-black tracking-tight text-white leading-tight uppercase drop-shadow-sm truncate">
+                  {companyName || "UNITY EARNING"}
+                </h1>
+                <span className="text-[#FBBF24] text-[13px] font-bold" title="Verified Platform">✦</span>
+              </div>
               <span className="text-[11px] text-[#38BDF8] font-black tracking-[0.14em] uppercase mt-0.5">
                 E-LEARNING PLATFORM
               </span>
@@ -97,21 +115,10 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
             </div>
           </div>
 
-          {/* Center Emblem: Golden Verified Shield */}
-          <div className="flex flex-col items-center justify-center flex-shrink-0 px-2">
-            <div className="relative w-14 h-14 rounded-full border-2 border-[#C59B3F] bg-gradient-to-b from-[#0D3863] via-[#072545] to-[#031326] flex items-center justify-center shadow-2xl">
-              <div className="absolute inset-0.5 rounded-full border border-[#C59B3F]/40 pointer-events-none"></div>
-              <svg viewBox="0 0 24 24" className="w-7 h-7 text-[#E5B84B] fill-none stroke-current drop-shadow-md" strokeWidth="2.2">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                <path d="M9 11.5l2 2 4.5-4.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-          </div>
-
           {/* Right Block: Verified Badge & Invoice Receipt Details - Fully padded & protected against clipping */}
           <div className="flex flex-col items-end text-right flex-shrink-0 max-w-[210px] pr-1">
             {/* Top Pill Badge: VERIFIED & SECURED */}
-            <div className="flex items-center gap-1.5 bg-[#05213D]/95 border border-emerald-500/50 px-2.5 py-1 rounded-full shadow-md backdrop-blur-sm">
+            <div className="flex items-center gap-1.5 bg-[#031326]/95 border border-emerald-500/50 px-2.5 py-1 rounded-full shadow-md backdrop-blur-sm">
               <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 text-emerald-400 fill-emerald-400 flex-shrink-0">
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                 <path d="M7 11V7a5 5 0 0110 0v4" fill="none" stroke="currentColor" strokeWidth="2.5" />
@@ -139,7 +146,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
               </span>
 
               {/* Secure ID pill */}
-              <div className="mt-1.5 flex items-center gap-1.5 bg-[#05213D]/95 px-2 py-0.5 rounded-md border border-sky-400/30 shadow-inner whitespace-nowrap">
+              <div className="mt-1.5 flex items-center gap-1.5 bg-[#031326]/95 px-2 py-0.5 rounded-md border border-sky-400/30 shadow-inner whitespace-nowrap">
                 <span className="text-[7.5px] text-[#38BDF8] font-black tracking-wider uppercase leading-none">
                   SECURE ID:
                 </span>
@@ -180,21 +187,21 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
       </div>
 
       <div className="px-6 py-5 flex flex-col gap-5 flex-grow">
-        {/* 3. ID HOLDER DETAILS CARD - WITH TL & TR INTEGRATED */}
-        <div className="rounded-[1.5rem] border border-slate-200 overflow-hidden shadow-md flex bg-white relative">
+        {/* 3. ID HOLDER DETAILS CARD - WITH BALANCED COLOR PALETTE */}
+        <div className="rounded-[1.5rem] border border-slate-300/80 overflow-hidden shadow-md flex bg-white relative">
           {/* Left Details Block with 8 perfectly aligned rows */}
           <div className="w-[72%] flex flex-col border-r border-slate-200">
             {/* Row 1: Status */}
             <div className="flex min-h-[46px] border-b border-slate-200">
-              <div className="w-[36%] bg-gradient-to-r from-[#0F4C81] to-[#0A3960] px-3.5 py-2.5 flex items-center gap-2 text-white border-r border-white/10">
-                <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#C59B3F] fill-none stroke-current" strokeWidth="2.5">
+              <div className="w-[36%] bg-[#06203D] px-3.5 py-2.5 flex items-center gap-2 text-white border-r border-white/10">
+                <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#F59E0B] fill-none stroke-current" strokeWidth="2.5">
                   <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
                   <path d="M21 12c0 1.2-4.03 6-9 6s-9-4.8-9-6c0-1.2 4.03-6 9-6s9 4.8 9 6z" />
                 </svg>
                 <span className="text-[12px] font-black tracking-wide text-white whitespace-nowrap">Status</span>
               </div>
               <div className="w-[64%] bg-white px-4 py-2 flex items-center">
-                <span className="inline-flex items-center gap-1.5 bg-emerald-50 border-2 border-emerald-500/40 px-3 py-1 rounded-full text-[12px] font-black text-emerald-700 shadow-sm">
+                <span className="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-500/40 px-3 py-1 rounded-full text-[12px] font-black text-emerald-700 shadow-sm">
                   <span className="w-2 rounded-full h-2 bg-emerald-500 animate-pulse"></span>
                   একটিভ (Active)
                 </span>
@@ -203,8 +210,8 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
 
             {/* Row 2: ID Holder (Name) */}
             <div className="flex min-h-[46px] border-b border-slate-200">
-              <div className="w-[36%] bg-[#0A3960] px-3.5 py-2.5 flex items-center gap-2 text-white border-r border-white/10">
-                <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#C59B3F] fill-none stroke-current" strokeWidth="2.5">
+              <div className="w-[36%] bg-[#06203D] px-3.5 py-2.5 flex items-center gap-2 text-white border-r border-white/10">
+                <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#F59E0B] fill-none stroke-current" strokeWidth="2.5">
                   <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
                   <circle cx="12" cy="7" r="4" />
                 </svg>
@@ -222,35 +229,35 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
 
             {/* Row 3: Email */}
             <div className="flex min-h-[46px] border-b border-slate-200">
-              <div className="w-[36%] bg-[#072F50] px-3.5 py-2.5 flex items-center gap-2 text-white border-r border-white/10">
-                <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#C59B3F] fill-none stroke-current" strokeWidth="2.5">
+              <div className="w-[36%] bg-[#06203D] px-3.5 py-2.5 flex items-center gap-2 text-white border-r border-white/10">
+                <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#F59E0B] fill-none stroke-current" strokeWidth="2.5">
                   <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                   <polyline points="22,6 12,13 2,6" />
                 </svg>
                 <span className="text-[12px] font-black tracking-wide text-white whitespace-nowrap">Email ID</span>
               </div>
               <div className="w-[64%] bg-white px-4 py-2 flex items-center overflow-hidden">
-                <span className="text-slate-900 font-extrabold text-[14.5px] break-all truncate">{email}</span>
+                <span className="text-slate-800 font-extrabold text-[14.5px] break-all truncate">{email}</span>
               </div>
             </div>
 
             {/* Row 4: Phone */}
             <div className="flex min-h-[46px] border-b border-slate-200">
-              <div className="w-[36%] bg-[#052d4c] px-3.5 py-2.5 flex items-center gap-2 text-white border-r border-white/10">
-                <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#C59B3F] fill-none stroke-current" strokeWidth="2.5">
+              <div className="w-[36%] bg-[#06203D] px-3.5 py-2.5 flex items-center gap-2 text-white border-r border-white/10">
+                <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#F59E0B] fill-none stroke-current" strokeWidth="2.5">
                   <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z" />
                 </svg>
                 <span className="text-[12px] font-black tracking-wide text-white whitespace-nowrap">Phone</span>
               </div>
               <div className="w-[64%] bg-white px-4 py-2 flex items-center">
-                <span className="text-slate-900 font-extrabold text-[14.5px] tracking-wide">{phone}</span>
+                <span className="text-slate-800 font-extrabold text-[14.5px] tracking-wide">{phone}</span>
               </div>
             </div>
 
             {/* Row 5: Student ID */}
             <div className="flex min-h-[46px] border-b border-slate-200">
-              <div className="w-[36%] bg-[#052541] px-3.5 py-2.5 flex items-center gap-2 text-white border-r border-white/10">
-                <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#C59B3F] fill-none stroke-current" strokeWidth="2.5">
+              <div className="w-[36%] bg-[#06203D] px-3.5 py-2.5 flex items-center gap-2 text-white border-r border-white/10">
+                <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#F59E0B] fill-none stroke-current" strokeWidth="2.5">
                   <rect x="3" y="4" width="18" height="16" rx="2" ry="2" />
                   <line x1="16" y1="2" x2="16" y2="4" />
                   <line x1="8" y1="2" x2="8" y2="4" />
@@ -265,8 +272,8 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
 
             {/* Row 6: Team Code */}
             <div className="flex min-h-[46px] border-b border-slate-200">
-              <div className="w-[36%] bg-[#031d33] px-3.5 py-2.5 flex items-center gap-2 text-white border-r border-white/10">
-                <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#C59B3F] fill-none stroke-current" strokeWidth="2.5">
+              <div className="w-[36%] bg-[#06203D] px-3.5 py-2.5 flex items-center gap-2 text-white border-r border-white/10">
+                <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#F59E0B] fill-none stroke-current" strokeWidth="2.5">
                   <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
                   <circle cx="9" cy="7" r="4" />
                   <path d="M23 21v-2a4 4 0 00-3-3.87" />
@@ -281,11 +288,11 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
 
             {/* Row 7: Team Leader (TL) */}
             <div className="flex min-h-[46px] border-b border-slate-200">
-              <div className="w-[36%] bg-gradient-to-r from-[#0F4C81] to-[#0D3860] px-3.5 py-2.5 flex items-center gap-2 text-white border-r border-white/10">
-                <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#FBBF24] fill-none stroke-current" strokeWidth="2.5">
+              <div className="w-[36%] bg-[#06203D] px-3.5 py-2.5 flex items-center gap-2 text-white border-r border-white/10">
+                <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#F59E0B] fill-none stroke-current" strokeWidth="2.5">
                   <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                 </svg>
-                <span className="text-[12px] font-black tracking-wide text-amber-200 whitespace-nowrap">Team Leader</span>
+                <span className="text-[12px] font-black tracking-wide text-white whitespace-nowrap">Team Leader</span>
               </div>
               <div className="w-[64%] bg-white px-4 py-2 flex items-center">
                 <span className="text-[#0A1D37] font-black text-[14.5px] tracking-tight">{teamLeader || "N/A"}</span>
@@ -294,12 +301,12 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
 
             {/* Row 8: Team Trainer (TR) */}
             <div className="flex min-h-[46px]">
-              <div className="w-[36%] bg-gradient-to-r from-[#0A3960] to-[#011F38] px-3.5 py-2.5 flex items-center gap-2 text-white border-r border-white/10">
-                <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#FBBF24] fill-none stroke-current" strokeWidth="2.5">
+              <div className="w-[36%] bg-[#06203D] px-3.5 py-2.5 flex items-center gap-2 text-white border-r border-white/10">
+                <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#F59E0B] fill-none stroke-current" strokeWidth="2.5">
                   <path d="M12 15l-2 5l4-2l4 2l-2-5" />
                   <circle cx="12" cy="9" r="6" />
                 </svg>
-                <span className="text-[12px] font-black tracking-wide text-amber-200 whitespace-nowrap">Team Trainer</span>
+                <span className="text-[12px] font-black tracking-wide text-white whitespace-nowrap">Team Trainer</span>
               </div>
               <div className="w-[64%] bg-white px-4 py-2 flex items-center">
                 <span className="text-[#0A1D37] font-black text-[14.5px] tracking-tight">{teamTrainer || "N/A"}</span>
@@ -308,13 +315,13 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
           </div>
 
           {/* Right Column: Sign / ID Activation Successful Seal */}
-          <div className="w-[28%] bg-gradient-to-b from-amber-50/50 via-white to-slate-50/80 flex flex-col items-center justify-center p-3 relative overflow-hidden">
+          <div className="w-[28%] bg-gradient-to-b from-emerald-50/30 via-slate-50/60 to-slate-100/80 flex flex-col items-center justify-center p-3 relative overflow-hidden">
             {/* Background Circular Seal Watermark */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-[0.08] pointer-events-none">
-              <div className="w-28 h-28 rounded-full border-4 border-dashed border-[#C59B3F]"></div>
+            <div className="absolute inset-0 flex items-center justify-center opacity-[0.06] pointer-events-none">
+              <div className="w-28 h-28 rounded-full border-4 border-dashed border-[#10B981]"></div>
             </div>
-            <div className="absolute inset-0 flex items-center justify-center opacity-[0.05] pointer-events-none">
-              <div className="w-36 h-36 rounded-full border border-[#C59B3F]"></div>
+            <div className="absolute inset-0 flex items-center justify-center opacity-[0.04] pointer-events-none">
+              <div className="w-36 h-36 rounded-full border border-[#0F4C81]"></div>
             </div>
 
             {avatarUrl ? (
