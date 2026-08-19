@@ -18,6 +18,7 @@ import {
   X,
   Award,
   ExternalLink,
+  ClipboardPaste,
 } from "lucide-react";
 import { toPng } from "html-to-image";
 
@@ -44,6 +45,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [parseError, setParseError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const pasteTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // TL & TR Management Modal State
   const [showTlTrModal, setShowTlTrModal] = useState(false);
@@ -248,6 +250,39 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     }
   };
 
+  // One-click paste from clipboard
+  const handlePasteFromClipboard = async () => {
+    setParseError(null);
+    // Focus textarea immediately to prepare for paste
+    pasteTextareaRef.current?.focus();
+
+    if (navigator?.clipboard?.readText) {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text && text.trim()) {
+          handleTextChange(text);
+          return;
+        } else {
+          setParseError("ক্লিপবোর্ডে কোনো কপি করা টেক্সট পাওয়া যায়নি! আগে মেসেজ কপি করুন।");
+          return;
+        }
+      } catch {
+        // Fallback if browser Permissions-Policy restricts readText in iframe
+        setParseError("ব্রাউজার সিকিউরিটির কারণে বক্সে কার্সার সেট করা হয়েছে। বক্সে সরাসরি Ctrl+V বা মোবাইলে Paste চাপুন।");
+        return;
+      }
+    } else {
+      setParseError("বক্সে কার্সার সেট করা হয়েছে। দয়া করে সরাসরি পেস্ট (Ctrl+V) করুন।");
+    }
+  };
+
+  // Clear parsed textarea
+  const handleClearPasteText = () => {
+    setPasteText("");
+    setParseSuccess(false);
+    setParseError(null);
+  };
+
   // Convert File to Base64 helper
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -350,14 +385,42 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       </div>
 
       {/* 1. AUTO-PARSE TEXT ZONE */}
-      <div className="flex flex-col gap-3.5 bg-slate-50/70 p-4 rounded-2xl border border-slate-100">
-        <span className="text-xs font-black text-[#0F4C81] uppercase tracking-wider flex items-center gap-1.5">
-          <FileText className="w-3.5 h-3.5" />
-          ১. ডাটা অটো-পার্সিং প্যানেল
-        </span>
+      <div className="flex flex-col gap-3 bg-slate-50/70 p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-xs font-black text-[#0F4C81] uppercase tracking-wider flex items-center gap-1.5">
+            <FileText className="w-3.5 h-3.5" />
+            ১. ডাটা অটো-পার্সিং প্যানেল
+          </span>
+
+          <div className="flex items-center gap-2">
+            {pasteText && (
+              <button
+                type="button"
+                onClick={handleClearPasteText}
+                className="text-[11px] font-bold text-slate-500 hover:text-red-600 bg-white hover:bg-red-50 border border-slate-200 hover:border-red-200 px-2.5 py-1.5 rounded-lg transition active:scale-95 cursor-pointer flex items-center gap-1"
+                title="বক্স পরিষ্কার করুন"
+              >
+                <X className="w-3.5 h-3.5" />
+                মুছুন
+              </button>
+            )}
+
+            {/* Prominent One-Click Paste Button */}
+            <button
+              type="button"
+              onClick={handlePasteFromClipboard}
+              className="flex items-center gap-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-black shadow-md shadow-blue-500/25 active:scale-95 transition cursor-pointer"
+              title="ক্লিপবোর্ডে কপি করা টেক্সট অটো পেস্ট করুন"
+            >
+              <ClipboardPaste className="w-4 h-4 text-sky-200" />
+              <span>পেস্ট করুন (Paste)</span>
+            </button>
+          </div>
+        </div>
 
         <textarea
-          placeholder="এখানে ডাটা কপি-পেস্ট করুন (অটোমেটিক পার্স হবে):&#10;Name : Ahmed Sabbir&#10;Email : ahmedsabbir9845@gmail.com&#10;Phone : 01307118068&#10;Student ID : 8302946&#10;Team Leader : Sabbir Ahmed&#10;Team Trainer : Nafis Iqbal"
+          ref={pasteTextareaRef}
+          placeholder="এখানে ডাটা পেস্ট করুন অথবা উপরের 'পেস্ট করুন' বাটনে চাপুন (অটোমেটিক পার্স হবে):&#10;Name : Ahmed Sabbir&#10;Email : ahmedsabbir9845@gmail.com&#10;Phone : 01307118068&#10;Student ID : 8302946&#10;Team Leader : Sabbir Ahmed&#10;Team Trainer : Nafis Iqbal"
           value={pasteText}
           onChange={(e) => handleTextChange(e.target.value)}
           className="w-full h-32 bg-white border border-slate-200 rounded-xl p-3 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-inner"

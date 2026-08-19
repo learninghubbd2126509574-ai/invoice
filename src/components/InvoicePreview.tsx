@@ -44,19 +44,19 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
       style={{ minHeight: "1120px" }}
     >
       {/* 1. TOP HEADER BANNER */}
-      <div className="relative bg-[#041931] pt-7 pb-9 pl-7 pr-7 text-white border-b-4 border-[#C59B3F] rounded-t-[2rem] overflow-hidden">
+      <div className="relative bg-[#072648] pt-7 pb-9 pl-7 pr-7 text-white border-b-4 border-[#C59B3F] rounded-t-[2rem] overflow-hidden">
         {/* Luxury Micro Pattern Overlay */}
-        <div className="absolute inset-0 pointer-events-none opacity-20">
+        <div className="absolute inset-0 pointer-events-none opacity-25">
           <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <pattern id="header-luxury-pattern" width="32" height="32" patternUnits="userSpaceOnUse">
                 {/* Micro tech/luxury grid with diamond & dot accents */}
-                <path d="M 32 0 L 0 32 M 0 0 L 32 32" fill="none" stroke="#C59B3F" strokeWidth="0.5" strokeOpacity="0.4" />
-                <circle cx="16" cy="16" r="1" fill="#38BDF8" fillOpacity="0.6" />
-                <circle cx="0" cy="0" r="1.2" fill="#E5B84B" fillOpacity="0.8" />
-                <circle cx="32" cy="0" r="1.2" fill="#E5B84B" fillOpacity="0.8" />
-                <circle cx="0" cy="32" r="1.2" fill="#E5B84B" fillOpacity="0.8" />
-                <circle cx="32" cy="32" r="1.2" fill="#E5B84B" fillOpacity="0.8" />
+                <path d="M 32 0 L 0 32 M 0 0 L 32 32" fill="none" stroke="#C59B3F" strokeWidth="0.5" strokeOpacity="0.45" />
+                <circle cx="16" cy="16" r="1.2" fill="#38BDF8" fillOpacity="0.7" />
+                <circle cx="0" cy="0" r="1.3" fill="#E5B84B" fillOpacity="0.85" />
+                <circle cx="32" cy="0" r="1.3" fill="#E5B84B" fillOpacity="0.85" />
+                <circle cx="0" cy="32" r="1.3" fill="#E5B84B" fillOpacity="0.85" />
+                <circle cx="32" cy="32" r="1.3" fill="#E5B84B" fillOpacity="0.85" />
               </pattern>
             </defs>
             <rect width="100%" height="100%" fill="url(#header-luxury-pattern)" />
@@ -64,11 +64,11 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
         </div>
 
         {/* Elegant Subtle Security Wave Lines across entire header */}
-        <div className="absolute inset-0 pointer-events-none opacity-25">
+        <div className="absolute inset-0 pointer-events-none opacity-30">
           <svg viewBox="0 0 640 180" className="w-full h-full" preserveAspectRatio="none">
-            <path d="M 0 35 C 160 85, 480 -15, 640 45" fill="none" stroke="#C59B3F" strokeWidth="1" strokeDasharray="4 4" />
-            <path d="M 0 75 C 200 120, 440 20, 640 85" fill="none" stroke="#38BDF8" strokeWidth="1" strokeOpacity="0.6" />
-            <path d="M 0 115 C 220 150, 420 60, 640 125" fill="none" stroke="#C59B3F" strokeWidth="0.8" strokeDasharray="2 4" strokeOpacity="0.5" />
+            <path d="M 0 35 C 160 85, 480 -15, 640 45" fill="none" stroke="#C59B3F" strokeWidth="1.2" strokeDasharray="4 4" />
+            <path d="M 0 75 C 200 120, 440 20, 640 85" fill="none" stroke="#38BDF8" strokeWidth="1.1" strokeOpacity="0.7" />
+            <path d="M 0 115 C 220 150, 420 60, 640 125" fill="none" stroke="#C59B3F" strokeWidth="0.9" strokeDasharray="2 4" strokeOpacity="0.6" />
           </svg>
         </div>
 
@@ -83,8 +83,8 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
                   <img src={logoUrl} alt="Custom Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                 </div>
               ) : (
-                <div className="relative w-16 h-16 rounded-full bg-gradient-to-b from-[#0F4C81] via-[#092B4D] to-[#04162B] border-2 border-[#C59B3F] flex items-center justify-center shadow-xl p-1">
-                  <div className="w-full h-full rounded-full border border-dashed border-[#C59B3F]/80 flex items-center justify-center bg-[#07203D]">
+                <div className="relative w-16 h-16 rounded-full bg-gradient-to-b from-[#0F4A80] via-[#0A3863] to-[#05213D] border-2 border-[#C59B3F] flex items-center justify-center shadow-xl p-1">
+                  <div className="w-full h-full rounded-full border border-dashed border-[#C59B3F]/80 flex items-center justify-center bg-[#072648]">
                     <svg viewBox="0 0 24 24" className="w-8 h-8 text-[#E5B84B] fill-current drop-shadow-md">
                       <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
                     </svg>
@@ -118,7 +118,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
           {/* Right Block: Verified Badge & Invoice Receipt Details - Fully padded & protected against clipping */}
           <div className="flex flex-col items-end text-right flex-shrink-0 max-w-[210px] pr-1">
             {/* Top Pill Badge: VERIFIED & SECURED */}
-            <div className="flex items-center gap-1.5 bg-[#031326]/95 border border-emerald-500/50 px-2.5 py-1 rounded-full shadow-md backdrop-blur-sm">
+            <div className="flex items-center gap-1.5 bg-[#051E38]/95 border border-emerald-500/50 px-2.5 py-1 rounded-full shadow-md backdrop-blur-sm">
               <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 text-emerald-400 fill-emerald-400 flex-shrink-0">
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                 <path d="M7 11V7a5 5 0 0110 0v4" fill="none" stroke="currentColor" strokeWidth="2.5" />
@@ -146,7 +146,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
               </span>
 
               {/* Secure ID pill */}
-              <div className="mt-1.5 flex items-center gap-1.5 bg-[#031326]/95 px-2 py-0.5 rounded-md border border-sky-400/30 shadow-inner whitespace-nowrap">
+              <div className="mt-1.5 flex items-center gap-1.5 bg-[#051E38]/95 px-2 py-0.5 rounded-md border border-sky-400/30 shadow-inner whitespace-nowrap">
                 <span className="text-[7.5px] text-[#38BDF8] font-black tracking-wider uppercase leading-none">
                   SECURE ID:
                 </span>
@@ -193,7 +193,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
           <div className="w-[72%] flex flex-col border-r border-slate-200">
             {/* Row 1: Status */}
             <div className="flex min-h-[46px] border-b border-slate-200">
-              <div className="w-[36%] bg-[#06203D] px-3.5 py-2.5 flex items-center gap-2 text-white border-r border-white/10">
+              <div className="w-[36%] bg-[#092F56] px-3.5 py-2.5 flex items-center gap-2 text-white border-r border-white/10">
                 <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#F59E0B] fill-none stroke-current" strokeWidth="2.5">
                   <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
                   <path d="M21 12c0 1.2-4.03 6-9 6s-9-4.8-9-6c0-1.2 4.03-6 9-6s9 4.8 9 6z" />
@@ -210,7 +210,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
 
             {/* Row 2: ID Holder (Name) */}
             <div className="flex min-h-[46px] border-b border-slate-200">
-              <div className="w-[36%] bg-[#06203D] px-3.5 py-2.5 flex items-center gap-2 text-white border-r border-white/10">
+              <div className="w-[36%] bg-[#092F56] px-3.5 py-2.5 flex items-center gap-2 text-white border-r border-white/10">
                 <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#F59E0B] fill-none stroke-current" strokeWidth="2.5">
                   <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
                   <circle cx="12" cy="7" r="4" />
@@ -229,7 +229,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
 
             {/* Row 3: Email */}
             <div className="flex min-h-[46px] border-b border-slate-200">
-              <div className="w-[36%] bg-[#06203D] px-3.5 py-2.5 flex items-center gap-2 text-white border-r border-white/10">
+              <div className="w-[36%] bg-[#092F56] px-3.5 py-2.5 flex items-center gap-2 text-white border-r border-white/10">
                 <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#F59E0B] fill-none stroke-current" strokeWidth="2.5">
                   <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                   <polyline points="22,6 12,13 2,6" />
@@ -243,7 +243,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
 
             {/* Row 4: Phone */}
             <div className="flex min-h-[46px] border-b border-slate-200">
-              <div className="w-[36%] bg-[#06203D] px-3.5 py-2.5 flex items-center gap-2 text-white border-r border-white/10">
+              <div className="w-[36%] bg-[#092F56] px-3.5 py-2.5 flex items-center gap-2 text-white border-r border-white/10">
                 <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#F59E0B] fill-none stroke-current" strokeWidth="2.5">
                   <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z" />
                 </svg>
@@ -256,7 +256,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
 
             {/* Row 5: Student ID */}
             <div className="flex min-h-[46px] border-b border-slate-200">
-              <div className="w-[36%] bg-[#06203D] px-3.5 py-2.5 flex items-center gap-2 text-white border-r border-white/10">
+              <div className="w-[36%] bg-[#092F56] px-3.5 py-2.5 flex items-center gap-2 text-white border-r border-white/10">
                 <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#F59E0B] fill-none stroke-current" strokeWidth="2.5">
                   <rect x="3" y="4" width="18" height="16" rx="2" ry="2" />
                   <line x1="16" y1="2" x2="16" y2="4" />
@@ -272,7 +272,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
 
             {/* Row 6: Team Code */}
             <div className="flex min-h-[46px] border-b border-slate-200">
-              <div className="w-[36%] bg-[#06203D] px-3.5 py-2.5 flex items-center gap-2 text-white border-r border-white/10">
+              <div className="w-[36%] bg-[#092F56] px-3.5 py-2.5 flex items-center gap-2 text-white border-r border-white/10">
                 <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#F59E0B] fill-none stroke-current" strokeWidth="2.5">
                   <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
                   <circle cx="9" cy="7" r="4" />
@@ -288,7 +288,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
 
             {/* Row 7: Team Leader (TL) */}
             <div className="flex min-h-[46px] border-b border-slate-200">
-              <div className="w-[36%] bg-[#06203D] px-3.5 py-2.5 flex items-center gap-2 text-white border-r border-white/10">
+              <div className="w-[36%] bg-[#092F56] px-3.5 py-2.5 flex items-center gap-2 text-white border-r border-white/10">
                 <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#F59E0B] fill-none stroke-current" strokeWidth="2.5">
                   <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                 </svg>
@@ -301,7 +301,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
 
             {/* Row 8: Team Trainer (TR) */}
             <div className="flex min-h-[46px]">
-              <div className="w-[36%] bg-[#06203D] px-3.5 py-2.5 flex items-center gap-2 text-white border-r border-white/10">
+              <div className="w-[36%] bg-[#092F56] px-3.5 py-2.5 flex items-center gap-2 text-white border-r border-white/10">
                 <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#F59E0B] fill-none stroke-current" strokeWidth="2.5">
                   <path d="M12 15l-2 5l4-2l4 2l-2-5" />
                   <circle cx="12" cy="9" r="6" />
@@ -392,9 +392,9 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
         </div>
 
         {/* 4. FINANCIAL SUMMARY PANEL (Cashback, Payment Method, Amount Paid) */}
-        <div className="bg-[#002B4D] rounded-[1.5rem] p-4 flex items-center text-white shadow-lg border border-[#001D36]">
+        <div className="bg-[#092F56] rounded-[1.5rem] p-4 flex items-center text-white shadow-lg border border-[#062444]">
           {/* Column 1: Cashback */}
-          <div className="w-[33%] flex items-center gap-3 border-r border-[#1E3A5F] pr-2">
+          <div className="w-[33%] flex items-center gap-3 border-r border-[#1B446F] pr-2">
             <div className="w-11 h-11 rounded-full bg-[#1E40AF]/60 border border-sky-400/30 flex items-center justify-center shadow-inner">
               <svg viewBox="0 0 24 24" className="w-5.5 h-5.5 text-sky-300 fill-none stroke-current" strokeWidth="2">
                 <rect x="2" y="5" width="20" height="14" rx="2" ry="2" />
@@ -413,7 +413,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
           </div>
 
           {/* Column 2: Payment Method */}
-          <div className="w-[34%] flex flex-col items-center border-r border-[#1E3A5F] px-2 text-center">
+          <div className="w-[34%] flex flex-col items-center border-r border-[#1B446F] px-2 text-center">
             <span className="text-[#7DD3FC] text-[8.5px] font-extrabold tracking-wider uppercase mb-1.5 leading-none">
               PAYMENT METHOD
             </span>
@@ -620,7 +620,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
       </div>
 
       {/* 8. BOTTOM FOOTER STRIP */}
-      <div className="bg-[#011C30] text-slate-400 py-2 px-6 flex justify-between items-center text-[9px] rounded-b-[2rem]">
+      <div className="bg-[#061F38] text-slate-300 py-2 px-6 flex justify-between items-center text-[9px] rounded-b-[2rem]">
         <div className="flex items-center gap-1">
           <svg viewBox="0 0 24 24" className="w-3 h-3 text-[#C59B3F] fill-current">
             <path d="M12 2L2 7l10 5 10-5-10-5z" />
