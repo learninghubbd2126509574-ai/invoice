@@ -206,15 +206,25 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
 
       <div className="px-6 py-4 flex flex-col gap-4 flex-grow">
         {/* 3. ID HOLDER DETAILS CARD - WITH BALANCED COLOR PALETTE */}
-        <div className="rounded-[1rem] overflow-hidden shadow-[0_4px_16px_rgba(0,0,0,0.06)] flex bg-white relative">
-          {/* Left Details Block with 8 perfectly aligned rows */}
+        <div className="rounded-[1rem] overflow-hidden shadow-[0_4px_16px_rgba(0,0,0,0.06)] flex flex-col bg-white relative">
+          
+          {/* Status Active Bar right above Name */}
+          <div className="bg-emerald-50 px-4 py-1.5 border-b border-emerald-100 flex items-center justify-between">
+            <span className="text-[10px] font-bold text-emerald-800 tracking-wider uppercase">Account Status</span>
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-black bg-emerald-600 text-white shadow-sm uppercase tracking-wider">
+              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+              Status: Active
+            </span>
+          </div>
+
+          <div className="flex bg-white">
+          {/* Left Details Block with perfectly aligned rows */}
           <div className="w-[72%] flex flex-col border-r border-slate-200">
-            {/* Note: The image DOES NOT have a 'Status' row. The top row is 'ID Holder' */}
             
             {/* Row 1: ID Holder (Name) */}
             <div className="flex min-h-[46px] border-b border-slate-200">
               <div className="w-[36%] bg-white px-3.5 py-2.5 flex items-center gap-2 border-r border-slate-200">
-                <div className="w-8 h-8 rounded-sm bg-[#3b82f6] flex items-center justify-center shadow-sm">
+                <div className="w-8 h-8 rounded-sm bg-[#60a5fa] flex items-center justify-center shadow-sm">
                   <svg viewBox="0 0 24 24" className="w-4 h-4 text-white fill-none stroke-current" strokeWidth="2.5">
                     <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
                     <circle cx="12" cy="7" r="4" />
@@ -224,7 +234,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
               </div>
               <div className="w-[64%] bg-white px-4 py-2 flex items-center gap-2 overflow-hidden">
                 <span className="text-black font-black text-[15px] tracking-tight truncate">{name}</span>
-                <span className="w-5 h-5 rounded-full bg-[#0a2353] flex items-center justify-center text-white p-0.5 shadow-sm flex-shrink-0">
+                <span className="w-5 h-5 rounded-full bg-[#22c55e] flex items-center justify-center text-white p-0.5 shadow-sm flex-shrink-0">
                   <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-none stroke-current" strokeWidth="4">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
@@ -385,6 +395,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
                   SUCCESSFUL
                 </span>
             </div>
+          </div>
           </div>
         </div>
 
