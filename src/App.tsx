@@ -116,6 +116,7 @@ export default function App() {
       teamTrainer: savedTr || DEFAULT_INVOICE_DATA.teamTrainer || "Nafis Iqbal",
       teamLeader: savedTl || DEFAULT_INVOICE_DATA.teamLeader || "Sabbir Ahmed",
       date: getTodayFormattedDate(),
+      logoUrl: localStorage.getItem("company_logo") || "", // Empty string to use nice SVG fallback until user uploads
     };
   });
   const [isSaving, setIsSaving] = useState(false);
@@ -182,12 +183,18 @@ export default function App() {
     }
   }, []);
 
-  // Sync logoUrl to localStorage whenever it changes
+  // Sync state variables to localStorage whenever they change
   useEffect(() => {
     if (invoiceData.logoUrl) {
       localStorage.setItem("company_logo", invoiceData.logoUrl);
     }
-  }, [invoiceData.logoUrl]);
+    if (invoiceData.teamLeader) {
+      localStorage.setItem("last_selected_team_leader", invoiceData.teamLeader);
+    }
+    if (invoiceData.teamTrainer) {
+      localStorage.setItem("last_selected_team_trainer", invoiceData.teamTrainer);
+    }
+  }, [invoiceData.logoUrl, invoiceData.teamLeader, invoiceData.teamTrainer]);
 
   // Check URL query parameters for verification ID (?id=...)
   useEffect(() => {
