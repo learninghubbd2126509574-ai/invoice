@@ -29,8 +29,6 @@ import {
   Sparkles,
 } from "lucide-react";
 import { toPng } from "html-to-image";
-import { doc, getDoc, setDoc } from "firebase/firestore";
-import { db } from "./lib/firebase";
 
 const DEFAULT_INVOICE_DATA: InvoiceData = {
   id: "",
@@ -208,7 +206,7 @@ export default function App() {
     }
   }, []);
 
-  // Fetch verified invoice from backend / Firebase
+  // Fetch verified invoice from backend
   const fetchVerifiedInvoice = async (id: string) => {
     setIsLookupLoading(true);
     setLookupError(null);
@@ -225,20 +223,7 @@ export default function App() {
         }
       }
 
-      // Try Firebase directly (works on Vercel)
-      try {
-        const docRef = doc(db, "invoices", id);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setVerifiedData(docSnap.data() as InvoiceData);
-          setIsLookupLoading(false);
-          return;
-        }
-      } catch (fbError) {
-        console.warn("Firebase direct read failed", fbError);
-      }
-
-      // Fallback to our express backend if Firebase fails or doesn't have it
+      // Fetch from our express backend (which connects to Supabase/Memory)
       const response = await fetch(`/api/invoices/${id}`);
       if (!response.ok) {
         throw new Error("ভেরিফিকেশন আইডি পাওয়া যায়নি অথবা ডাটাবেজে রেকর্ডটি নেই!");
@@ -253,7 +238,7 @@ export default function App() {
     }
   };
 
-  // Save invoice to backend Firestore / Memory DB
+  // Save invoice to backend database / Memory DB fallback
   const handleSaveInvoice = async (): Promise<string> => {
     setIsSaving(true);
     try {
@@ -270,26 +255,16 @@ export default function App() {
         createdAt: new Date().toISOString(),
       };
 
-      let savedDirectly = false;
-      try {
-        await setDoc(doc(db, "invoices", uniqueId), updatedData);
-        savedDirectly = true;
-      } catch (fbError) {
-        console.warn("Firebase direct save failed", fbError);
-      }
+      const response = await fetch("/api/invoices", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updatedData),
+      });
 
-      if (!savedDirectly) {
-        const response = await fetch("/api/invoices", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(updatedData),
-        });
-
-        if (!response.ok) {
-          throw new Error("ইনভয়েস সেভ করতে সমস্যা হয়েছে!");
-        }
+      if (!response.ok) {
+        throw new Error("ইনভয়েস সেভ করতে সমস্যা হয়েছে!");
       }
 
       setGeneratedId(uniqueId);

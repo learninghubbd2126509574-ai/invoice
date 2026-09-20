@@ -11,8 +11,7 @@ import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
-import { initializeApp } from "firebase/app";
-import { getFirestore, doc, getDoc, setDoc, collection, addDoc, getDocs, deleteDoc } from "firebase/firestore";
+import { createClient } from "@supabase/supabase-js";
 
 const app = express();
 const PORT = 3000;
@@ -21,23 +20,23 @@ const PORT = 3000;
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ limit: "15mb", extended: true }));
 
-// --- FIREBASE INITIALIZATION ---
-let db: any = null;
-let firebaseInitialized = false;
+// --- SUPABASE INITIALIZATION ---
+let supabase: any = null;
+let supabaseInitialized = false;
 
-try {
-  const configPath = path.join(process.cwd(), "firebase-applet-config.json");
-  if (fs.existsSync(configPath)) {
-    const firebaseConfig = JSON.parse(fs.readFileSync(configPath, "utf-8"));
-    const firebaseApp = initializeApp(firebaseConfig);
-    db = getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId);
-    firebaseInitialized = true;
-    console.log(`Firebase initialized successfully on backend with database: ${firebaseConfig.firestoreDatabaseId}`);
-  } else {
-    console.warn("Firebase config not found. Falling back to memory storage.");
+const supabaseUrl = process.env.SUPABASE_URL || "";
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || "";
+
+if (supabaseUrl && supabaseAnonKey) {
+  try {
+    supabase = createClient(supabaseUrl, supabaseAnonKey);
+    supabaseInitialized = true;
+    console.log("Supabase client initialized successfully on backend.");
+  } catch (e) {
+    console.error("Error initializing Supabase client:", e);
   }
-} catch (e) {
-  console.error("Error initializing Firebase. Falling back to memory storage.", e);
+} else {
+  console.warn("Supabase credentials (SUPABASE_URL, SUPABASE_ANON_KEY) not found. Falling back to memory storage.");
 }
 
 // In-memory fallback database for robustness
@@ -65,7 +64,7 @@ if (process.env.GEMINI_API_KEY) {
 app.get("/api/health", (req, res) => {
   res.json({
     status: "ok",
-    firebase: firebaseInitialized ? "connected" : "fallback",
+    supabase: supabaseInitialized ? "connected" : "fallback",
     gemini: !!ai ? "enabled" : "disabled",
   });
 });
@@ -162,24 +161,30 @@ app.post("/api/invoices", async (req, res) => {
       createdAt: new Date().toISOString(),
     };
 
-    let savedToFirestore = false;
+    let savedToSupabase = false;
 
-    if (firebaseInitialized && db) {
+    if (supabaseInitialized && supabase) {
       try {
-        // Save to Firebase Firestore under collection 'invoices'
-        await setDoc(doc(db, "invoices", invoiceId), dataToSave);
-        console.log(`Saved invoice ${invoiceId} to Firestore.`);
-        savedToFirestore = true;
-      } catch (firestoreError: any) {
-        console.error("Firestore save failed, falling back to memory:", firestoreError);
+        // Save to Supabase under table 'invoices' using upsert
+        const { error } = await supabase
+          .from("invoices")
+          .upsert(dataToSave);
+        
+        if (error) {
+          throw error;
+        }
+        console.log(`Saved invoice ${invoiceId} to Supabase.`);
+        savedToSupabase = true;
+      } catch (supabaseError: any) {
+        console.error("Supabase save failed, falling back to memory:", supabaseError);
       }
     }
 
     // Always persist to in-memory fallback for local persistence and resiliency
     memoryDb[invoiceId] = dataToSave;
-    console.log(`Saved invoice ${invoiceId} to in-memory store. (Firestore save status: ${savedToFirestore})`);
+    console.log(`Saved invoice ${invoiceId} to in-memory store. (Supabase save status: ${savedToSupabase})`);
 
-    return res.json({ success: true, id: invoiceId, fallback: !savedToFirestore });
+    return res.json({ success: true, id: invoiceId, fallback: !savedToSupabase });
   } catch (error: any) {
     console.error("Error saving invoice:", error);
     return res.status(500).json({ error: "Failed to save invoice", details: error.message });
@@ -191,17 +196,20 @@ app.get("/api/invoices/:id", async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (firebaseInitialized && db) {
+    if (supabaseInitialized && supabase) {
       try {
-        const docRef = doc(db, "invoices", id);
-        const docSnap = await getDoc(docRef);
+        const { data, error } = await supabase
+          .from("invoices")
+          .select("*")
+          .eq("id", id)
+          .maybeSingle();
 
-        if (docSnap.exists()) {
-          console.log(`Retrieved invoice ${id} from Firestore.`);
-          return res.json(docSnap.data());
+        if (data && !error) {
+          console.log(`Retrieved invoice ${id} from Supabase.`);
+          return res.json(data);
         }
-      } catch (firestoreError: any) {
-        console.error("Firestore retrieve failed, falling back to memory:", firestoreError);
+      } catch (supabaseError: any) {
+        console.error("Supabase retrieve failed, falling back to memory:", supabaseError);
       }
     }
 
@@ -221,20 +229,23 @@ app.get("/api/invoices/:id", async (req, res) => {
 // Clear Database Endpoint
 app.post("/api/clear-database", async (req, res) => {
   try {
-    let clearedFirestoreCount = 0;
-    if (firebaseInitialized && db) {
+    let clearedSupabaseCount = 0;
+    if (supabaseInitialized && supabase) {
       try {
-        const querySnapshot = await getDocs(collection(db, "invoices"));
-        const deletePromises: Promise<any>[] = [];
-        querySnapshot.forEach((document) => {
-          deletePromises.push(deleteDoc(doc(db, "invoices", document.id)));
-          clearedFirestoreCount++;
-        });
-        await Promise.all(deletePromises);
-        console.log(`Cleared ${clearedFirestoreCount} documents from Firestore.`);
-      } catch (firestoreError: any) {
-        console.error("Firestore clear failed:", firestoreError);
-        throw new Error(`Firestore clear failed: ${firestoreError.message}`);
+        // Delete all rows from invoices table (where id is not empty)
+        const { error, data } = await supabase
+          .from("invoices")
+          .delete()
+          .neq("id", "0");
+
+        if (error) {
+          throw error;
+        }
+        console.log("Cleared documents from Supabase.");
+        clearedSupabaseCount = 1; // Mark as successfully cleared
+      } catch (supabaseError: any) {
+        console.error("Supabase clear failed:", supabaseError);
+        throw new Error(`Supabase clear failed: ${supabaseError.message}`);
       }
     }
 
@@ -248,7 +259,7 @@ app.post("/api/clear-database", async (req, res) => {
     return res.json({
       success: true,
       message: "Database cleared successfully.",
-      clearedFirestoreCount,
+      clearedSupabaseCount,
       clearedMemoryCount: memoryKeys.length
     });
   } catch (error: any) {
