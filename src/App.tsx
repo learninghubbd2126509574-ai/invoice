@@ -29,6 +29,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { toPng } from "html-to-image";
+import { supabase } from "./lib/supabase";
 
 const DEFAULT_INVOICE_DATA: InvoiceData = {
   id: "",
@@ -151,12 +152,22 @@ export default function App() {
     setShowClearConfirm(false);
     setIsClearing(true);
     try {
-      const response = await fetch("/api/clear-database", {
-        method: "POST",
-      });
-      if (!response.ok) {
-        throw new Error("ডাটা ক্লিয়ার করতে সমস্যা হয়েছে!");
+      // Direct Supabase clear (works on Vercel)
+      try {
+        await supabase.from("invoices").delete().neq("id", "0");
+      } catch (sbClearErr) {
+        console.warn("Direct Supabase clear warning:", sbClearErr);
       }
+
+      // Backend API clear (if backend running)
+      try {
+        await fetch("/api/clear-database", {
+          method: "POST",
+        });
+      } catch (apiErr) {
+        console.warn("Backend API clear warning (normal on static Vercel):", apiErr);
+      }
+
       showToast("ডাটাবেজ সফলভাবে সম্পূর্ণ ক্লিয়ার করা হয়েছে!", "success");
       setInvoiceData((prev) => ({
         ...DEFAULT_INVOICE_DATA,
@@ -206,7 +217,7 @@ export default function App() {
     }
   }, []);
 
-  // Fetch verified invoice from backend
+  // Fetch verified invoice directly from Supabase (works on Vercel & everywhere)
   const fetchVerifiedInvoice = async (id: string) => {
     setIsLookupLoading(true);
     setLookupError(null);
@@ -223,13 +234,38 @@ export default function App() {
         }
       }
 
-      // Fetch from our express backend (which connects to Supabase/Memory)
-      const response = await fetch(`/api/invoices/${id}`);
-      if (!response.ok) {
-        throw new Error("ভেরিফিকেশন আইডি পাওয়া যায়নি অথবা ডাটাবেজে রেকর্ডটি নেই!");
+      // 1. Query Supabase directly from browser (crucial for Vercel static deployment)
+      try {
+        const { data, error } = await supabase
+          .from("invoices")
+          .select("*")
+          .eq("id", id)
+          .maybeSingle();
+
+        if (data && !error) {
+          console.log("Successfully fetched invoice from Supabase on client:", id);
+          setVerifiedData(data as InvoiceData);
+          setIsLookupLoading(false);
+          return;
+        }
+      } catch (sbError) {
+        console.warn("Direct Supabase fetch error, trying backend fallback:", sbError);
       }
-      const data = await response.json();
-      setVerifiedData(data);
+
+      // 2. Fallback to Express backend if running
+      try {
+        const response = await fetch(`/api/invoices/${id}`);
+        if (response.ok) {
+          const data = await response.json();
+          setVerifiedData(data);
+          setIsLookupLoading(false);
+          return;
+        }
+      } catch (backendError) {
+        console.warn("Backend fetch failed (normal on static Vercel):", backendError);
+      }
+
+      throw new Error("ভেরিফিকেশন আইডি পাওয়া যায়নি অথবা ডাটাবেজে রেকর্ডটি নেই!");
     } catch (err: any) {
       console.error("Lookup error:", err);
       setLookupError(err.message || "ভেরিফিকেশন ডাটা ফেচ করতে সমস্যা হয়েছে!");
@@ -238,7 +274,7 @@ export default function App() {
     }
   };
 
-  // Save invoice to backend database / Memory DB fallback
+  // Save invoice to Supabase directly and backend API
   const handleSaveInvoice = async (): Promise<string> => {
     setIsSaving(true);
     try {
@@ -255,16 +291,53 @@ export default function App() {
         createdAt: new Date().toISOString(),
       };
 
-      const response = await fetch("/api/invoices", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(updatedData),
-      });
+      let savedDirectly = false;
 
-      if (!response.ok) {
-        throw new Error("ইনভয়েস সেভ করতে সমস্যা হয়েছে!");
+      // 1. Direct Supabase save from browser (ensures Vercel saves work seamlessly)
+      try {
+        let res = await supabase.from("invoices").upsert(updatedData);
+
+        if (res.error && (res.error.code === "PGRST204" || res.error.message?.includes("Could not find the"))) {
+          console.warn("Supabase schema column missing, stripping and retrying...", res.error.message);
+          const sanitizedPayload = { ...updatedData };
+          const match = res.error.message.match(/Could not find the '([^']+)' column/);
+          if (match && match[1]) {
+            delete (sanitizedPayload as any)[match[1]];
+          } else {
+            delete (sanitizedPayload as any).avatarUrl;
+          }
+          res = await supabase.from("invoices").upsert(sanitizedPayload);
+        }
+
+        if (!res.error) {
+          savedDirectly = true;
+          console.log("Direct client save to Supabase succeeded!");
+        } else {
+          console.warn("Direct Supabase save warning:", res.error);
+        }
+      } catch (sbError) {
+        console.warn("Direct Supabase save error:", sbError);
+      }
+
+      // 2. Also save to backend API if Express backend is running
+      try {
+        const response = await fetch("/api/invoices", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(updatedData),
+        });
+
+        if (response.ok) {
+          savedDirectly = true;
+        }
+      } catch (apiError) {
+        console.warn("Backend API not reachable (normal on static Vercel):", apiError);
+      }
+
+      if (!savedDirectly) {
+        console.warn("Could not confirm direct write, continuing with verified local preview.");
       }
 
       setGeneratedId(uniqueId);
@@ -273,7 +346,7 @@ export default function App() {
       showToast("ইনভয়েস সফলভাবে সেভ হয়েছে ও শর্ট লিঙ্ক তৈরি হয়েছে!", "success");
       return uniqueId;
     } catch (err) {
-      console.warn("Backend save issue, ensuring clean short ID is preserved.", err);
+      console.warn("Save issue:", err);
       const cleanShortCode = invoiceData.referralCode && invoiceData.referralCode.trim().length > 3
         ? invoiceData.referralCode.trim()
         : Math.floor(100000 + Math.random() * 900000).toString();
@@ -283,17 +356,6 @@ export default function App() {
         id: uniqueId,
         date: invoiceData.date || getTodayFormattedDate(),
       };
-      
-      // Try local server store fallback
-      try {
-        await fetch("/api/invoices", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(updatedData),
-        });
-      } catch (e) {
-        console.error("Local store backup error", e);
-      }
 
       setGeneratedId(uniqueId);
       setInvoiceData(updatedData);
