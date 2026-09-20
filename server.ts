@@ -24,14 +24,14 @@ app.use(express.urlencoded({ limit: "15mb", extended: true }));
 let supabase: any = null;
 let supabaseInitialized = false;
 
-const supabaseUrl = process.env.SUPABASE_URL || "";
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || "";
+const supabaseUrl = process.env.SUPABASE_URL || "https://yxtnoaaqefgkflrkzcfy.supabase.co";
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4dG5vYWFxZWZna2Zscmt6Y2Z5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk5MTczNjYsImV4cCI6MjEwNTQ5MzM2Nn0.Cy2CKI2izgiWFHxhBB4_5eBJWmowokBiat5lnbsfV2M";
 
 if (supabaseUrl && supabaseAnonKey) {
   try {
     supabase = createClient(supabaseUrl, supabaseAnonKey);
     supabaseInitialized = true;
-    console.log("Supabase client initialized successfully on backend.");
+    console.log("Supabase client initialized successfully on backend with URL:", supabaseUrl);
   } catch (e) {
     console.error("Error initializing Supabase client:", e);
   }
@@ -60,11 +60,30 @@ if (process.env.GEMINI_API_KEY) {
 
 // --- API ENDPOINTS ---
 
-// Health Check
-app.get("/api/health", (req, res) => {
+// Health Check & Database Status
+app.get("/api/health", async (req, res) => {
+  let tableStatus = "untested";
+  let tableError: any = null;
+  if (supabaseInitialized && supabase) {
+    try {
+      const { error } = await supabase.from("invoices").select("id").limit(1);
+      if (error) {
+        tableStatus = "table_error";
+        tableError = error.message;
+      } else {
+        tableStatus = "ready";
+      }
+    } catch (err: any) {
+      tableStatus = "query_failed";
+      tableError = err.message;
+    }
+  }
+
   res.json({
     status: "ok",
     supabase: supabaseInitialized ? "connected" : "fallback",
+    supabaseTable: tableStatus,
+    tableError,
     gemini: !!ai ? "enabled" : "disabled",
   });
 });
@@ -162,20 +181,38 @@ app.post("/api/invoices", async (req, res) => {
     };
 
     let savedToSupabase = false;
+    let supabaseErrorMessage: string | null = null;
 
     if (supabaseInitialized && supabase) {
       try {
-        // Save to Supabase under table 'invoices' using upsert
-        const { error } = await supabase
+        // Attempt 1: Try saving with all payload fields
+        let res = await supabase
           .from("invoices")
           .upsert(dataToSave);
         
-        if (error) {
-          throw error;
+        // If a column is missing from the Supabase schema (e.g. avatarUrl or custom field)
+        if (res.error && (res.error.code === "PGRST204" || res.error.message?.includes("Could not find the"))) {
+          console.warn("Supabase schema column missing, stripping unmatched column and retrying...", res.error.message);
+          const sanitizedPayload = { ...dataToSave };
+          // Extract the column name if possible, or strip known optional columns
+          const match = res.error.message.match(/Could not find the '([^']+)' column/);
+          if (match && match[1]) {
+            delete sanitizedPayload[match[1]];
+          } else {
+            delete sanitizedPayload.avatarUrl;
+          }
+          res = await supabase
+            .from("invoices")
+            .upsert(sanitizedPayload);
+        }
+
+        if (res.error) {
+          throw res.error;
         }
         console.log(`Saved invoice ${invoiceId} to Supabase.`);
         savedToSupabase = true;
       } catch (supabaseError: any) {
+        supabaseErrorMessage = supabaseError?.message || JSON.stringify(supabaseError);
         console.error("Supabase save failed, falling back to memory:", supabaseError);
       }
     }
@@ -184,7 +221,7 @@ app.post("/api/invoices", async (req, res) => {
     memoryDb[invoiceId] = dataToSave;
     console.log(`Saved invoice ${invoiceId} to in-memory store. (Supabase save status: ${savedToSupabase})`);
 
-    return res.json({ success: true, id: invoiceId, fallback: !savedToSupabase });
+    return res.json({ success: true, id: invoiceId, fallback: !savedToSupabase, supabaseError: supabaseErrorMessage });
   } catch (error: any) {
     console.error("Error saving invoice:", error);
     return res.status(500).json({ error: "Failed to save invoice", details: error.message });

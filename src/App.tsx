@@ -631,9 +631,9 @@ export default function App() {
               {isClearing ? "ডাটা ক্লিয়ার হচ্ছে..." : "ডাটাবেজ ক্লিয়ার করুন"}
             </button>
 
-            <div className="hidden sm:flex items-center gap-2 bg-blue-50 border border-slate-100 px-3.5 py-1.5 rounded-full text-[11px] font-bold text-blue-700 shadow-inner">
+            <div className="hidden sm:flex items-center gap-2 bg-emerald-50 border border-emerald-200/60 px-3.5 py-1.5 rounded-full text-[11px] font-bold text-emerald-700 shadow-inner">
               <Database className="w-3.5 h-3.5 animate-pulse" />
-              ফায়ারবেস ডাটাবেজ সক্রিয় (Firebase Live)
+              সুপাবেজ ডাটাবেজ সক্রিয় (Supabase Live)
             </div>
           </div>
         </div>
