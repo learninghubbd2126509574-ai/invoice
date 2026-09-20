@@ -29,6 +29,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import { toPng } from "html-to-image";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { db } from "./lib/firebase";
 
 const DEFAULT_INVOICE_DATA: InvoiceData = {
   id: "",
@@ -133,16 +135,6 @@ export default function App() {
   // Custom dialogs/notifications
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
-  const [dbStatus, setDbStatus] = useState<"connected" | "fallback" | "loading">("loading");
-
-  useEffect(() => {
-    fetch("/api/health")
-      .then((res) => res.json())
-      .then((data) => {
-        setDbStatus(data.supabase === "connected" ? "connected" : "fallback");
-      })
-      .catch(() => setDbStatus("fallback"));
-  }, []);
 
   const showToast = (message: string, type: "success" | "error" | "info" = "success") => {
     setToast({ message, type });
@@ -216,7 +208,7 @@ export default function App() {
     }
   }, []);
 
-  // Fetch verified invoice from backend
+  // Fetch verified invoice from backend / Firebase
   const fetchVerifiedInvoice = async (id: string) => {
     setIsLookupLoading(true);
     setLookupError(null);
@@ -233,7 +225,20 @@ export default function App() {
         }
       }
 
-      // Fetch from our express backend (which connects to Supabase/Memory)
+      // Try Firebase directly (works on Vercel)
+      try {
+        const docRef = doc(db, "invoices", id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setVerifiedData(docSnap.data() as InvoiceData);
+          setIsLookupLoading(false);
+          return;
+        }
+      } catch (fbError) {
+        console.warn("Firebase direct read failed", fbError);
+      }
+
+      // Fallback to our express backend if Firebase fails or doesn't have it
       const response = await fetch(`/api/invoices/${id}`);
       if (!response.ok) {
         throw new Error("ভেরিফিকেশন আইডি পাওয়া যায়নি অথবা ডাটাবেজে রেকর্ডটি নেই!");
@@ -248,7 +253,7 @@ export default function App() {
     }
   };
 
-  // Save invoice to backend database / Memory DB fallback
+  // Save invoice to backend Firestore / Memory DB
   const handleSaveInvoice = async (): Promise<string> => {
     setIsSaving(true);
     try {
@@ -265,16 +270,26 @@ export default function App() {
         createdAt: new Date().toISOString(),
       };
 
-      const response = await fetch("/api/invoices", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(updatedData),
-      });
+      let savedDirectly = false;
+      try {
+        await setDoc(doc(db, "invoices", uniqueId), updatedData);
+        savedDirectly = true;
+      } catch (fbError) {
+        console.warn("Firebase direct save failed", fbError);
+      }
 
-      if (!response.ok) {
-        throw new Error("ইনভয়েস সেভ করতে সমস্যা হয়েছে!");
+      if (!savedDirectly) {
+        const response = await fetch("/api/invoices", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(updatedData),
+        });
+
+        if (!response.ok) {
+          throw new Error("ইনভয়েস সেভ করতে সমস্যা হয়েছে!");
+        }
       }
 
       setGeneratedId(uniqueId);
@@ -641,15 +656,9 @@ export default function App() {
               {isClearing ? "ডাটা ক্লিয়ার হচ্ছে..." : "ডাটাবেজ ক্লিয়ার করুন"}
             </button>
 
-            <div className={`hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[11px] font-bold shadow-sm border transition-colors ${
-              dbStatus === "connected"
-                ? "bg-emerald-50 border-emerald-300 text-emerald-800"
-                : "bg-emerald-50/70 border-emerald-200 text-emerald-700"
-            }`}>
-              <Database className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
-              {dbStatus === "connected"
-                ? "সুপাবেজ ডাটাবেজ সক্রিয় (Supabase Live)"
-                : "সুপাবেজ ডাটাবেজ ইঞ্জিন সক্রিয় (Supabase Engine)"}
+            <div className="hidden sm:flex items-center gap-2 bg-blue-50 border border-slate-100 px-3.5 py-1.5 rounded-full text-[11px] font-bold text-blue-700 shadow-inner">
+              <Database className="w-3.5 h-3.5 animate-pulse" />
+              ফায়ারবেস ডাটাবেজ সক্রিয় (Firebase Live)
             </div>
           </div>
         </div>
