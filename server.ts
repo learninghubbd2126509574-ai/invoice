@@ -266,31 +266,134 @@ app.get("/api/invoices/:id", async (req, res) => {
 const ADMIN_SETTINGS_FILE = path.join(process.cwd(), ".admin-settings.json");
 const ADMIN_SETTINGS_ID = "__admin_settings__";
 
-app.get("/api/admin-settings", (req, res) => {
+app.get("/api/admin-settings", async (req, res) => {
   try {
+    let best: any = null;
+
     if (fs.existsSync(ADMIN_SETTINGS_FILE)) {
-      const raw = fs.readFileSync(ADMIN_SETTINGS_FILE, "utf-8");
-      return res.json(JSON.parse(raw));
+      try {
+        const raw = fs.readFileSync(ADMIN_SETTINGS_FILE, "utf-8");
+        best = JSON.parse(raw);
+      } catch {
+        // Ignore corrupt local file
+      }
     }
+
     if (memoryDb[ADMIN_SETTINGS_ID]) {
-      return res.json(memoryDb[ADMIN_SETTINGS_ID]);
+      const mem = memoryDb[ADMIN_SETTINGS_ID];
+      if (!best || (typeof mem.updatedAt === "number" && mem.updatedAt >= (best.updatedAt || 0))) {
+        best = mem;
+      }
     }
-    return res.json(null);
+
+    if (supabaseInitialized && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from("invoices")
+          .select("*")
+          .eq("id", ADMIN_SETTINGS_ID)
+          .maybeSingle();
+
+        if (data && !error) {
+          let parsedEmail: any = {};
+          if (typeof data.email === "string" && data.email.trim().startsWith("{")) {
+            try {
+              parsedEmail = JSON.parse(data.email);
+            } catch {
+              parsedEmail = {};
+            }
+          }
+          const sbSettings = {
+            tlList: Array.isArray(parsedEmail.tlList) ? parsedEmail.tlList : [],
+            trList: Array.isArray(parsedEmail.trList) ? parsedEmail.trList : [],
+            selectedTl:
+              typeof parsedEmail.selectedTl === "string"
+                ? parsedEmail.selectedTl
+                : data.teamLeader || "",
+            selectedTr:
+              typeof parsedEmail.selectedTr === "string"
+                ? parsedEmail.selectedTr
+                : data.teamTrainer || "",
+            logoUrl: typeof data.logoUrl === "string" ? data.logoUrl : "",
+            hasLogo:
+              typeof parsedEmail.hasLogo === "boolean"
+                ? parsedEmail.hasLogo
+                : Boolean(data.logoUrl),
+            demoPurgedV2: Boolean(parsedEmail.demoPurgedV2),
+            updatedAt: typeof parsedEmail.updatedAt === "number" ? parsedEmail.updatedAt : 1,
+          };
+
+          if (!best || sbSettings.updatedAt >= (best.updatedAt || 0)) {
+            best = sbSettings;
+            memoryDb[ADMIN_SETTINGS_ID] = best;
+          }
+        }
+      } catch (sbErr) {
+        console.warn("Supabase GET admin-settings warning:", sbErr);
+      }
+    }
+
+    return res.json(best);
   } catch (err: any) {
-    console.error("Failed reading admin settings file:", err);
+    console.error("Failed reading admin settings:", err);
     return res.json(null);
   }
 });
 
-app.post("/api/admin-settings", (req, res) => {
+app.post("/api/admin-settings", async (req, res) => {
   try {
     const payload = req.body;
+    if (!payload || typeof payload !== "object") {
+      return res.status(400).json({ error: "Invalid admin settings payload" });
+    }
+
     memoryDb[ADMIN_SETTINGS_ID] = payload;
+
     try {
       fs.writeFileSync(ADMIN_SETTINGS_FILE, JSON.stringify(payload, null, 2), "utf-8");
     } catch (fsErr) {
-      console.warn("Could not write .admin-settings.json (read-only fs fallback to memory):", fsErr);
+      console.warn("Could not write .admin-settings.json (ephemeral fs fallback):", fsErr);
     }
+
+    if (supabaseInitialized && supabase) {
+      try {
+        const encodedMeta = JSON.stringify({
+          tlList: Array.isArray(payload.tlList) ? payload.tlList : [],
+          trList: Array.isArray(payload.trList) ? payload.trList : [],
+          selectedTl: payload.selectedTl || "",
+          selectedTr: payload.selectedTr || "",
+          hasLogo: Boolean(payload.logoUrl),
+          demoPurgedV2: true,
+          updatedAt: typeof payload.updatedAt === "number" ? payload.updatedAt : Date.now(),
+        });
+
+        const { error } = await supabase.from("invoices").upsert({
+          id: ADMIN_SETTINGS_ID,
+          name: "__ADMIN_SETTINGS__",
+          email: encodedMeta,
+          phone: "00000000000",
+          referralCode: "ADMIN",
+          teamCode: "ADMIN",
+          teamLeader: payload.selectedTl || "",
+          teamTrainer: payload.selectedTr || "",
+          cashback: "0",
+          amountPaid: "0",
+          paymentMethod: "Bkash",
+          companyName: "Unity Earning",
+          companyWebsite: "www.unityearning.com",
+          transactionId: "ADMIN-CONFIG",
+          date: new Date().toISOString(),
+          logoUrl: payload.logoUrl || "",
+        });
+
+        if (error) {
+          console.warn("Supabase POST admin-settings error:", error.message);
+        }
+      } catch (sbErr) {
+        console.warn("Supabase POST admin-settings exception:", sbErr);
+      }
+    }
+
     return res.json({ success: true });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });

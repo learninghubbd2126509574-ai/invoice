@@ -30,7 +30,7 @@ import { toPng } from "html-to-image";
 
 interface AdminPanelProps {
   initialData: InvoiceData;
-  onChange: (data: InvoiceData) => void;
+  onChange: React.Dispatch<React.SetStateAction<InvoiceData>>;
   onSave: () => Promise<string>;
   isSaving: boolean;
   generatedId: string | null;
@@ -57,7 +57,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [newTrInput, setNewTrInput] = useState("");
   const [saveNotice, setSaveNotice] = useState<string | null>(null);
 
-  // Load permanent TL & TR lists synchronously on boot
+  const [confirmClearType, setConfirmClearType] = useState<"tl" | "tr" | null>(null);
+
+  // Load permanent TL & TR lists synchronously on boot (empty until user adds names)
   const [tlList, setTlList] = useState<string[]>(() => getInitialAdminSettingsSync().tlList);
   const [trList, setTrList] = useState<string[]>(() => getInitialAdminSettingsSync().trList);
 
@@ -77,91 +79,103 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       const nextTl =
         persisted.selectedTl && persisted.tlList.includes(persisted.selectedTl)
           ? persisted.selectedTl
-          : persisted.tlList[0] || initialData.teamLeader || "";
+          : persisted.tlList[0] || "";
       const nextTr =
         persisted.selectedTr && persisted.trList.includes(persisted.selectedTr)
           ? persisted.selectedTr
-          : persisted.trList[0] || initialData.teamTrainer || "";
-      const nextLogo = persisted.logoUrl || initialData.logoUrl || "";
+          : persisted.trList[0] || "";
+      const nextLogo = persisted.logoUrl || "";
 
-      if (
-        nextTl !== initialData.teamLeader ||
-        nextTr !== initialData.teamTrainer ||
-        nextLogo !== (initialData.logoUrl || "")
-      ) {
-        onChange({
-          ...initialData,
-          teamLeader: nextTl,
-          teamTrainer: nextTr,
-          logoUrl: nextLogo,
-        });
-      }
+      onChange((prev) => ({
+        ...prev,
+        teamLeader: nextTl,
+        teamTrainer: nextTr,
+        logoUrl: nextLogo,
+      }));
     });
     return () => {
       active = false;
     };
-  }, []);
+  }, [onChange]);
 
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   // Switch active TL
   const handleSelectTl = (tlName: string) => {
-    onChange({ ...initialData, teamLeader: tlName });
-    savePermanentAdminSettings({ tlList, selectedTl: tlName });
+    onChange((prev) => ({ ...prev, teamLeader: tlName }));
+    void savePermanentAdminSettings({ tlList, selectedTl: tlName });
   };
 
   // Switch active TR
   const handleSelectTr = (trName: string) => {
-    onChange({ ...initialData, teamTrainer: trName });
-    savePermanentAdminSettings({ trList, selectedTr: trName });
+    onChange((prev) => ({ ...prev, teamTrainer: trName }));
+    void savePermanentAdminSettings({ trList, selectedTr: trName });
   };
 
   // Add & Permanently Save new TL
-  const handleAddTl = () => {
+  const handleAddTl = async () => {
     const trimmed = newTlInput.trim();
     if (!trimmed) return;
     const updated = tlList.includes(trimmed) ? tlList : [...tlList, trimmed];
     setTlList(updated);
-    onChange({ ...initialData, teamLeader: trimmed });
-    savePermanentAdminSettings({ tlList: updated, selectedTl: trimmed });
     setNewTlInput("");
-    flashSaveNotice(`টিম লিডার "${trimmed}" স্থায়ীভাবে সেভ হয়েছে!`);
+    onChange((prev) => ({ ...prev, teamLeader: trimmed }));
+    await savePermanentAdminSettings({ tlList: updated, selectedTl: trimmed });
+    flashSaveNotice(`টিম লিডার "${trimmed}" স্থায়ীভাবে ডাটাবেজে সেভ হয়েছে!`);
   };
 
   // Delete TL (Only when admin explicitly clicks Delete)
-  const handleDeleteTl = (nameToDelete: string) => {
+  const handleDeleteTl = async (nameToDelete: string) => {
     const updated = tlList.filter((item) => item !== nameToDelete);
     setTlList(updated);
     const nextTl = initialData.teamLeader === nameToDelete ? updated[0] || "" : initialData.teamLeader || "";
-    onChange({ ...initialData, teamLeader: nextTl });
-    savePermanentAdminSettings({ tlList: updated, selectedTl: nextTl });
+    onChange((prev) => ({ ...prev, teamLeader: nextTl }));
+    await savePermanentAdminSettings({ tlList: updated, selectedTl: nextTl });
     flashSaveNotice(`"${nameToDelete}" তালিকা থেকে ডিলিট করা হয়েছে`);
   };
 
+  // Clear All TLs (Only when admin explicitly confirms Clear All)
+  const handleClearAllTls = async () => {
+    setTlList([]);
+    setConfirmClearType(null);
+    onChange((prev) => ({ ...prev, teamLeader: "" }));
+    await savePermanentAdminSettings({ tlList: [], selectedTl: "" });
+    flashSaveNotice("সকল টিম লিডারের নাম ক্লিয়ার করা হয়েছে");
+  };
+
   // Add & Permanently Save new TR
-  const handleAddTr = () => {
+  const handleAddTr = async () => {
     const trimmed = newTrInput.trim();
     if (!trimmed) return;
     const updated = trList.includes(trimmed) ? trList : [...trList, trimmed];
     setTrList(updated);
-    onChange({ ...initialData, teamTrainer: trimmed });
-    savePermanentAdminSettings({ trList: updated, selectedTr: trimmed });
     setNewTrInput("");
-    flashSaveNotice(`টিম ট্রেনার "${trimmed}" স্থায়ীভাবে সেভ হয়েছে!`);
+    onChange((prev) => ({ ...prev, teamTrainer: trimmed }));
+    await savePermanentAdminSettings({ trList: updated, selectedTr: trimmed });
+    flashSaveNotice(`টিম ট্রেনার "${trimmed}" স্থায়ীভাবে ডাটাবেজে সেভ হয়েছে!`);
   };
 
   // Delete TR (Only when admin explicitly clicks Delete)
-  const handleDeleteTr = (nameToDelete: string) => {
+  const handleDeleteTr = async (nameToDelete: string) => {
     const updated = trList.filter((item) => item !== nameToDelete);
     setTrList(updated);
     const nextTr = initialData.teamTrainer === nameToDelete ? updated[0] || "" : initialData.teamTrainer || "";
-    onChange({ ...initialData, teamTrainer: nextTr });
-    savePermanentAdminSettings({ trList: updated, selectedTr: nextTr });
+    onChange((prev) => ({ ...prev, teamTrainer: nextTr }));
+    await savePermanentAdminSettings({ trList: updated, selectedTr: nextTr });
     flashSaveNotice(`"${nameToDelete}" তালিকা থেকে ডিলিট করা হয়েছে`);
   };
 
+  // Clear All TRs (Only when admin explicitly confirms Clear All)
+  const handleClearAllTrs = async () => {
+    setTrList([]);
+    setConfirmClearType(null);
+    onChange((prev) => ({ ...prev, teamTrainer: "" }));
+    await savePermanentAdminSettings({ trList: [], selectedTr: "" });
+    flashSaveNotice("সকল টিম ট্রেনারের নাম ক্লিয়ার করা হয়েছে");
+  };
+
   // Save any pending input & close modal
-  const handleSaveAndCloseModal = () => {
+  const handleSaveAndCloseModal = async () => {
     let nextTlList = tlList;
     let nextTrList = trList;
     let nextSelectedTl = initialData.teamLeader || "";
@@ -182,18 +196,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       setNewTrInput("");
     }
 
-    onChange({
-      ...initialData,
+    onChange((prev) => ({
+      ...prev,
       teamLeader: nextSelectedTl,
       teamTrainer: nextSelectedTr,
-    });
-    savePermanentAdminSettings({
+    }));
+    setShowTlTrModal(false);
+    setConfirmClearType(null);
+    await savePermanentAdminSettings({
       tlList: nextTlList,
       trList: nextTrList,
       selectedTl: nextSelectedTl,
       selectedTr: nextSelectedTr,
     });
-    setShowTlTrModal(false);
   };
 
   // Real-time automatic parsing on paste or type
@@ -250,18 +265,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       if (Object.keys(parsed).length > 0) {
         const finalTl = parsed.teamLeader || initialData.teamLeader || "";
         const finalTr = parsed.teamTrainer || initialData.teamTrainer || "";
-        onChange({
-          ...initialData,
+        onChange((prev) => ({
+          ...prev,
           teamTrainer: finalTr,
           teamLeader: finalTl,
           ...parsed,
-        } as InvoiceData);
-        savePermanentAdminSettings({
-          tlList: updatedTlList,
-          trList: updatedTrList,
-          selectedTl: finalTl,
-          selectedTr: finalTr,
-        });
+        }));
+        if (parsed.teamLeader || parsed.teamTrainer) {
+          void savePermanentAdminSettings({
+            tlList: updatedTlList,
+            trList: updatedTrList,
+            selectedTl: finalTl,
+            selectedTr: finalTr,
+          });
+        }
         setParseSuccess(true);
       } else {
         setParseSuccess(false);
@@ -310,10 +327,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const optimizedLogo = await optimizeLogoImageToDataUrl(file, 512);
-      onChange({ ...initialData, logoUrl: optimizedLogo });
+      const optimizedLogo = await optimizeLogoImageToDataUrl(file, 400);
+      onChange((prev) => ({ ...prev, logoUrl: optimizedLogo }));
       await savePermanentAdminSettings({ logoUrl: optimizedLogo });
-      flashSaveNotice("লোগো স্থায়ীভাবে সেভ হয়েছে!");
+      flashSaveNotice("লোগো স্থায়ীভাবে ডাটাবেজে সেভ হয়েছে!");
     } catch (err) {
       console.error("Failed to upload logo", err);
     } finally {
@@ -325,7 +342,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   // Explicit logo delete handler (only removes when admin clicks Delete)
   const handleDeleteLogo = async () => {
-    onChange({ ...initialData, logoUrl: "" });
+    onChange((prev) => ({ ...prev, logoUrl: "" }));
     await savePermanentAdminSettings({ logoUrl: "" });
     flashSaveNotice("আপলোড করা লোগো ডিলিট করা হয়েছে");
   };
@@ -448,7 +465,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
         <textarea
           ref={pasteTextareaRef}
-          placeholder="এখানে ডাটা পেস্ট করুন অথবা উপরের 'পেস্ট করুন' বাটনে চাপুন (অটোমেটিক পার্স হবে):&#10;Name : Ahmed Sabbir&#10;Email : ahmedsabbir9845@gmail.com&#10;Phone : 01307118068&#10;Student ID : 8302946&#10;Team Leader : Sabbir Ahmed&#10;Team Trainer : Nafis Iqbal"
+          placeholder="এখানে ডাটা পেস্ট করুন অথবা উপরের 'পেস্ট করুন' বাটনে চাপুন (অটোমেটিক পার্স হবে):&#10;Name : Student Name&#10;Email : student@gmail.com&#10;Phone : 01700000000&#10;Student ID : 8302946&#10;Team Code : 336251"
           value={pasteText}
           onChange={(e) => handleTextChange(e.target.value)}
           className="w-full h-32 bg-white border border-slate-200 rounded-xl p-3 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-inner"
@@ -1080,11 +1097,43 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </div>
 
                 <div className="flex flex-col gap-2 max-h-56 overflow-y-auto pr-1">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                    স্থায়ীভাবে সংরক্ষিত টিম লিডার (ক্লিক করে সুইচ করুন)
-                  </span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                      স্থায়ীভাবে সংরক্ষিত টিম লিডার (ক্লিক করে সুইচ করুন)
+                    </span>
+                    {tlList.length > 0 && (
+                      confirmClearType === "tl" ? (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={handleClearAllTls}
+                            className="text-[10px] font-black text-white bg-red-600 hover:bg-red-700 px-2 py-0.5 rounded cursor-pointer"
+                          >
+                            হ্যাঁ, সব মুছুন
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmClearType(null)}
+                            className="text-[10px] font-bold text-slate-600 bg-slate-200 hover:bg-slate-300 px-2 py-0.5 rounded cursor-pointer"
+                          >
+                            না
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setConfirmClearType("tl")}
+                          className="text-[10px] font-bold text-red-600 hover:underline cursor-pointer"
+                        >
+                          সব ক্লিয়ার করুন
+                        </button>
+                      )
+                    )}
+                  </div>
                   {tlList.length === 0 ? (
-                    <p className="text-xs text-slate-400 italic py-2 text-center">কোনো নাম যুক্ত নেই</p>
+                    <p className="text-xs text-slate-400 italic py-3 text-center">
+                      এখনো কোনো টিম লিডারের নাম যুক্ত করা হয়নি
+                    </p>
                   ) : (
                     tlList.map((item, idx) => {
                       const isSelected = initialData.teamLeader === item;
@@ -1155,11 +1204,43 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </div>
 
                 <div className="flex flex-col gap-2 max-h-56 overflow-y-auto pr-1">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                    স্থায়ীভাবে সংরক্ষিত টিম ট্রেনার (ক্লিক করে সুইচ করুন)
-                  </span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                      স্থায়ীভাবে সংরক্ষিত টিম ট্রেনার (ক্লিক করে সুইচ করুন)
+                    </span>
+                    {trList.length > 0 && (
+                      confirmClearType === "tr" ? (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={handleClearAllTrs}
+                            className="text-[10px] font-black text-white bg-red-600 hover:bg-red-700 px-2 py-0.5 rounded cursor-pointer"
+                          >
+                            হ্যাঁ, সব মুছুন
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmClearType(null)}
+                            className="text-[10px] font-bold text-slate-600 bg-slate-200 hover:bg-slate-300 px-2 py-0.5 rounded cursor-pointer"
+                          >
+                            না
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setConfirmClearType("tr")}
+                          className="text-[10px] font-bold text-red-600 hover:underline cursor-pointer"
+                        >
+                          সব ক্লিয়ার করুন
+                        </button>
+                      )
+                    )}
+                  </div>
                   {trList.length === 0 ? (
-                    <p className="text-xs text-slate-400 italic py-2 text-center">কোনো নাম যুক্ত নেই</p>
+                    <p className="text-xs text-slate-400 italic py-3 text-center">
+                      এখনো কোনো টিম ট্রেনারের নাম যুক্ত করা হয়নি
+                    </p>
                   ) : (
                     trList.map((item, idx) => {
                       const isSelected = initialData.teamTrainer === item;
@@ -1211,7 +1292,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             {/* Modal footer */}
             <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
               <span className="text-[10.5px] font-bold text-slate-500">
-                ডিলিট না করা পর্যন্ত সকল নাম স্থায়ীভাবে সেভ থাকবে
+                ডিলিট বা ক্লিয়ার না করা পর্যন্ত নাম স্থায়ীভাবে সেভ থাকবে
               </span>
               <button
                 type="button"

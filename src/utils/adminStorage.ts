@@ -2,21 +2,27 @@ import { supabase } from "../lib/supabase";
 
 export const ADMIN_SETTINGS_RECORD_ID = "__admin_settings__";
 
-export const DEFAULT_TLS = [
+// Zero demo names by default — only user-added TL & TR names are ever stored or shown
+export const DEFAULT_TLS: string[] = [];
+export const DEFAULT_TRS: string[] = [];
+
+const LEGACY_DEMO_TLS = new Set([
   "Sabbir Ahmed",
   "Tanvir Hasan",
   "Rakib Hossain",
   "Mehedi Hasan",
   "Mahmudul Hasan",
-];
+  "Sanjida Alam",
+]);
 
-export const DEFAULT_TRS = [
+const LEGACY_DEMO_TRS = new Set([
   "Nafis Iqbal",
   "Sumon Mia",
   "Al Amin",
   "Arif Rahman",
   "Shakil Khan",
-];
+  "Khadija Akter",
+]);
 
 export interface PersistentAdminSettings {
   tlList: string[];
@@ -24,12 +30,90 @@ export interface PersistentAdminSettings {
   selectedTl: string;
   selectedTr: string;
   logoUrl: string;
+  hasLogo?: boolean;
+  demoPurgedV2?: boolean;
   updatedAt: number;
 }
 
 const IDB_NAME = "unity_earning_admin_db";
 const IDB_STORE = "admin_settings_store";
 const IDB_KEY = "persistent_admin_config";
+
+let memoryCache: PersistentAdminSettings | null = null;
+let hasHydratedOnce = false;
+let activeHydrationPromise: Promise<PersistentAdminSettings> | null = null;
+
+function sanitizeSettings(
+  raw: Partial<PersistentAdminSettings> | null | undefined
+): { settings: PersistentAdminSettings; didPurgeDemo: boolean } {
+  if (!raw) {
+    return {
+      settings: {
+        tlList: [],
+        trList: [],
+        selectedTl: "",
+        selectedTr: "",
+        logoUrl: "",
+        hasLogo: false,
+        demoPurgedV2: true,
+        updatedAt: 0,
+      },
+      didPurgeDemo: false,
+    };
+  }
+
+  let tlList = Array.isArray(raw.tlList)
+    ? Array.from(new Set(raw.tlList.map((s) => String(s).trim()).filter(Boolean)))
+    : [];
+  let trList = Array.isArray(raw.trList)
+    ? Array.from(new Set(raw.trList.map((s) => String(s).trim()).filter(Boolean)))
+    : [];
+  let selectedTl = typeof raw.selectedTl === "string" ? raw.selectedTl.trim() : "";
+  let selectedTr = typeof raw.selectedTr === "string" ? raw.selectedTr.trim() : "";
+  const logoUrl = typeof raw.logoUrl === "string" ? raw.logoUrl : "";
+  const hasLogo = typeof raw.hasLogo === "boolean" ? raw.hasLogo : Boolean(logoUrl);
+  const updatedAt = typeof raw.updatedAt === "number" && Number.isFinite(raw.updatedAt) ? raw.updatedAt : 0;
+
+  let didPurgeDemo = false;
+  if (!raw.demoPurgedV2) {
+    const filteredTls = tlList.filter((name) => !LEGACY_DEMO_TLS.has(name));
+    const filteredTrs = trList.filter((name) => !LEGACY_DEMO_TRS.has(name));
+    if (filteredTls.length !== tlList.length || filteredTrs.length !== trList.length) {
+      didPurgeDemo = true;
+    }
+    tlList = filteredTls;
+    trList = filteredTrs;
+    if (selectedTl && LEGACY_DEMO_TLS.has(selectedTl)) {
+      selectedTl = tlList[0] || "";
+      didPurgeDemo = true;
+    }
+    if (selectedTr && LEGACY_DEMO_TRS.has(selectedTr)) {
+      selectedTr = trList[0] || "";
+      didPurgeDemo = true;
+    }
+  }
+
+  if (selectedTl && !tlList.includes(selectedTl)) {
+    selectedTl = tlList[0] || "";
+  }
+  if (selectedTr && !trList.includes(selectedTr)) {
+    selectedTr = trList[0] || "";
+  }
+
+  return {
+    settings: {
+      tlList,
+      trList,
+      selectedTl,
+      selectedTr,
+      logoUrl,
+      hasLogo,
+      demoPurgedV2: true,
+      updatedAt,
+    },
+    didPurgeDemo,
+  };
+}
 
 function openAdminDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -81,54 +165,49 @@ async function readFromIndexedDB(): Promise<PersistentAdminSettings | null> {
 }
 
 /**
- * Read synchronous snapshot from localStorage immediately on boot
+ * Read synchronous snapshot from memoryCache or localStorage immediately on boot
  */
 export function getInitialAdminSettingsSync(): PersistentAdminSettings {
-  let tlList = DEFAULT_TLS;
-  let trList = DEFAULT_TRS;
-  let selectedTl = DEFAULT_TLS[0];
-  let selectedTr = DEFAULT_TRS[0];
-  let logoUrl = "";
-  let updatedAt = 0;
+  if (memoryCache) {
+    return memoryCache;
+  }
 
   if (typeof window === "undefined") {
-    return { tlList, trList, selectedTl, selectedTr, logoUrl, updatedAt };
+    return sanitizeSettings(null).settings;
   }
 
   try {
     const rawTl = localStorage.getItem("saved_team_leaders");
-    if (rawTl !== null) {
-      const parsed = JSON.parse(rawTl);
-      if (Array.isArray(parsed)) tlList = parsed;
-    }
-
     const rawTr = localStorage.getItem("saved_team_trainers");
-    if (rawTr !== null) {
-      const parsed = JSON.parse(rawTr);
-      if (Array.isArray(parsed)) trList = parsed;
-    }
-
     const savedTl = localStorage.getItem("last_selected_team_leader");
-    if (savedTl !== null) {
-      selectedTl = savedTl;
-    } else {
-      selectedTl = tlList[0] || "";
-    }
-
     const savedTr = localStorage.getItem("last_selected_team_trainer");
-    if (savedTr !== null) {
-      selectedTr = savedTr;
-    } else {
-      selectedTr = trList[0] || "";
-    }
+    const logoUrl = localStorage.getItem("company_logo") || "";
+    const hasLogoRaw = localStorage.getItem("admin_settings_has_logo");
+    const demoPurgedV2 = localStorage.getItem("admin_settings_demo_purged_v2") === "true";
+    const updatedAt = Number(localStorage.getItem("admin_settings_updated_at") || "0");
 
-    logoUrl = localStorage.getItem("company_logo") || "";
-    updatedAt = Number(localStorage.getItem("admin_settings_updated_at") || "0");
+    const parsedTl = rawTl !== null ? JSON.parse(rawTl) : [];
+    const parsedTr = rawTr !== null ? JSON.parse(rawTr) : [];
+
+    const { settings, didPurgeDemo } = sanitizeSettings({
+      tlList: Array.isArray(parsedTl) ? parsedTl : [],
+      trList: Array.isArray(parsedTr) ? parsedTr : [],
+      selectedTl: savedTl ?? "",
+      selectedTr: savedTr ?? "",
+      logoUrl,
+      hasLogo: hasLogoRaw !== null ? hasLogoRaw === "true" : Boolean(logoUrl),
+      demoPurgedV2,
+      updatedAt,
+    });
+
+    if (didPurgeDemo) {
+      writeToLocalStorage(settings);
+    }
+    return settings;
   } catch (err) {
     console.warn("Failed reading localStorage admin settings:", err);
+    return sanitizeSettings(null).settings;
   }
-
-  return { tlList, trList, selectedTl, selectedTr, logoUrl, updatedAt };
 }
 
 function writeToLocalStorage(settings: PersistentAdminSettings): void {
@@ -139,149 +218,278 @@ function writeToLocalStorage(settings: PersistentAdminSettings): void {
     localStorage.setItem("last_selected_team_leader", settings.selectedTl || "");
     localStorage.setItem("last_selected_team_trainer", settings.selectedTr || "");
     localStorage.setItem("admin_settings_updated_at", String(settings.updatedAt));
+    localStorage.setItem("admin_settings_has_logo", settings.hasLogo ? "true" : "false");
+    localStorage.setItem("admin_settings_demo_purged_v2", "true");
+  } catch (err) {
+    console.warn("localStorage metadata write warning:", err);
+  }
+
+  try {
     if (settings.logoUrl) {
       localStorage.setItem("company_logo", settings.logoUrl);
     } else {
       localStorage.removeItem("company_logo");
     }
   } catch (err) {
-    // Even if localStorage hits quota on huge images, IndexedDB + Server + Supabase still save it
-    console.warn("localStorage write warning (recoverable via IndexedDB):", err);
+    // Even if localStorage hits quota on large images, IndexedDB + Backend + Supabase retain logoUrl
+    console.warn("localStorage logo write warning (recoverable via IndexedDB/Supabase):", err);
   }
 }
 
+async function syncSettingsToRemote(settings: PersistentAdminSettings): Promise<void> {
+  const encodedMeta = JSON.stringify({
+    tlList: settings.tlList,
+    trList: settings.trList,
+    selectedTl: settings.selectedTl,
+    selectedTr: settings.selectedTr,
+    hasLogo: Boolean(settings.logoUrl),
+    demoPurgedV2: true,
+    updatedAt: settings.updatedAt,
+  });
+
+  // 1. Direct Supabase upsert to permanent __admin_settings__ row
+  const supabasePromise = (async () => {
+    try {
+      const { error } = await supabase.from("invoices").upsert({
+        id: ADMIN_SETTINGS_RECORD_ID,
+        name: "__ADMIN_SETTINGS__",
+        email: encodedMeta,
+        phone: "00000000000",
+        referralCode: "ADMIN",
+        teamCode: "ADMIN",
+        teamLeader: settings.selectedTl || "",
+        teamTrainer: settings.selectedTr || "",
+        cashback: "0",
+        amountPaid: "0",
+        paymentMethod: "Bkash",
+        companyName: "Unity Earning",
+        companyWebsite: "www.unityearning.com",
+        transactionId: "ADMIN-CONFIG",
+        date: new Date().toISOString(),
+        logoUrl: settings.logoUrl || "",
+      });
+      if (error) {
+        console.warn("Supabase admin settings upsert error:", error.message);
+      }
+    } catch (err) {
+      console.warn("Supabase admin settings network warning:", err);
+    }
+  })();
+
+  // 2. Backend API sync (also persists to Supabase + disk on server)
+  const backendPromise = (async () => {
+    try {
+      await fetch("/api/admin-settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settings),
+      });
+    } catch {
+      // Normal on static deployment
+    }
+  })();
+
+  await Promise.all([supabasePromise, backendPromise]);
+}
+
 /**
- * Save settings permanently across localStorage + IndexedDB + Backend API + Supabase
+ * Save settings permanently across localStorage + IndexedDB + Supabase + Backend API.
+ * Always hydrates from cloud first if this browser tab hasn't hydrated yet, preventing cold-tab overwrites.
  */
 export async function savePermanentAdminSettings(
   partial: Partial<Omit<PersistentAdminSettings, "updatedAt">>
 ): Promise<PersistentAdminSettings> {
-  const current = getInitialAdminSettingsSync();
-  const idbCurrent = await readFromIndexedDB();
-  const base =
-    idbCurrent && idbCurrent.updatedAt >= current.updatedAt
-      ? idbCurrent
-      : current;
+  if (!hasHydratedOnce) {
+    try {
+      await hydratePermanentAdminSettings();
+    } catch {
+      // Continue with local state if offline
+    }
+  }
+
+  const base = memoryCache || getInitialAdminSettingsSync();
+
+  const nextTlList =
+    partial.tlList !== undefined
+      ? Array.from(new Set(partial.tlList.map((s) => s.trim()).filter(Boolean)))
+      : base.tlList;
+  const nextTrList =
+    partial.trList !== undefined
+      ? Array.from(new Set(partial.trList.map((s) => s.trim()).filter(Boolean)))
+      : base.trList;
+
+  let nextSelectedTl = partial.selectedTl !== undefined ? partial.selectedTl.trim() : base.selectedTl;
+  let nextSelectedTr = partial.selectedTr !== undefined ? partial.selectedTr.trim() : base.selectedTr;
+
+  if (nextSelectedTl && !nextTlList.includes(nextSelectedTl)) {
+    nextSelectedTl = nextTlList[0] || "";
+  }
+  if (nextSelectedTr && !nextTrList.includes(nextSelectedTr)) {
+    nextSelectedTr = nextTrList[0] || "";
+  }
+
+  const nextLogoUrl = partial.logoUrl !== undefined ? partial.logoUrl : base.logoUrl;
 
   const merged: PersistentAdminSettings = {
-    tlList: partial.tlList !== undefined ? partial.tlList : base.tlList,
-    trList: partial.trList !== undefined ? partial.trList : base.trList,
-    selectedTl: partial.selectedTl !== undefined ? partial.selectedTl : base.selectedTl,
-    selectedTr: partial.selectedTr !== undefined ? partial.selectedTr : base.selectedTr,
-    logoUrl: partial.logoUrl !== undefined ? partial.logoUrl : base.logoUrl,
+    tlList: nextTlList,
+    trList: nextTrList,
+    selectedTl: nextSelectedTl,
+    selectedTr: nextSelectedTr,
+    logoUrl: nextLogoUrl,
+    hasLogo: Boolean(nextLogoUrl),
+    demoPurgedV2: true,
     updatedAt: Date.now(),
   };
 
+  memoryCache = merged;
   writeToLocalStorage(merged);
   await saveToIndexedDB(merged);
-
-  // Sync to Express server disk storage (if backend running)
-  try {
-    await fetch("/api/admin-settings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(merged),
-    });
-  } catch {
-    // Normal if static deployment
-  }
-
-  // Sync to Supabase dedicated settings record so it persists across sessions/devices
-  try {
-    const encodedLists = JSON.stringify({
-      tlList: merged.tlList,
-      trList: merged.trList,
-      selectedTl: merged.selectedTl,
-      selectedTr: merged.selectedTr,
-      updatedAt: merged.updatedAt,
-    });
-    await supabase.from("invoices").upsert({
-      id: ADMIN_SETTINGS_RECORD_ID,
-      name: "__ADMIN_SETTINGS__",
-      email: encodedLists,
-      phone: "00000000000",
-      referralCode: "ADMIN",
-      teamCode: "ADMIN",
-      teamLeader: merged.selectedTl || "",
-      teamTrainer: merged.selectedTr || "",
-      cashback: "0",
-      amountPaid: "0",
-      paymentMethod: "Bkash",
-      companyName: "Unity Earning",
-      companyWebsite: "www.unityearning.com",
-      transactionId: "ADMIN-CONFIG",
-      date: new Date().toISOString(),
-      logoUrl: merged.logoUrl || "",
-    });
-  } catch {
-    // Ignore schema/offline warnings
-  }
+  await syncSettingsToRemote(merged);
 
   return merged;
 }
 
 /**
- * Hydrate latest permanent settings from IndexedDB -> Server -> Supabase on mount
+ * Hydrate latest permanent settings from Local -> IndexedDB -> Backend -> Supabase on mount.
+ * Never overwrites newer cloud records with cold/empty local defaults.
  */
 export async function hydratePermanentAdminSettings(): Promise<PersistentAdminSettings> {
-  const local = getInitialAdminSettingsSync();
-  let best: PersistentAdminSettings = local;
-
-  const idbData = await readFromIndexedDB();
-  if (idbData && idbData.updatedAt >= best.updatedAt) {
-    best = idbData;
+  if (activeHydrationPromise) {
+    return activeHydrationPromise;
   }
 
-  // Check backend file store
-  try {
-    const res = await fetch("/api/admin-settings");
-    if (res.ok) {
-      const serverData = (await res.json()) as PersistentAdminSettings | null;
-      if (serverData && typeof serverData.updatedAt === "number" && serverData.updatedAt > best.updatedAt) {
-        best = serverData;
+  activeHydrationPromise = (async () => {
+    try {
+      const local = getInitialAdminSettingsSync();
+      const candidates: PersistentAdminSettings[] = [local];
+      let cloudHadLegacyDemo = false;
+      let maxRemoteUpdatedAt = 0;
+
+      // 1. Read IndexedDB
+      const rawIdb = await readFromIndexedDB();
+      if (rawIdb) {
+        const { settings: idbClean } = sanitizeSettings(rawIdb);
+        candidates.push(idbClean);
       }
-    }
-  } catch {
-    // Normal on static hosting
-  }
 
-  // Check Supabase permanent settings row
-  try {
-    const { data, error } = await supabase
-      .from("invoices")
-      .select("*")
-      .eq("id", ADMIN_SETTINGS_RECORD_ID)
-      .maybeSingle();
-
-    if (data && !error && data.email) {
-      const parsed = JSON.parse(data.email);
-      if (parsed && typeof parsed.updatedAt === "number" && parsed.updatedAt > best.updatedAt) {
-        best = {
-          tlList: Array.isArray(parsed.tlList) ? parsed.tlList : best.tlList,
-          trList: Array.isArray(parsed.trList) ? parsed.trList : best.trList,
-          selectedTl: typeof parsed.selectedTl === "string" ? parsed.selectedTl : best.selectedTl,
-          selectedTr: typeof parsed.selectedTr === "string" ? parsed.selectedTr : best.selectedTr,
-          logoUrl: typeof data.logoUrl === "string" ? data.logoUrl : best.logoUrl,
-          updatedAt: parsed.updatedAt,
-        };
-      } else if (!best.logoUrl && typeof data.logoUrl === "string" && data.logoUrl) {
-        best = { ...best, logoUrl: data.logoUrl };
+      // 2. Read Backend API
+      try {
+        const res = await fetch("/api/admin-settings");
+        if (res.ok) {
+          const rawServer = (await res.json()) as Partial<PersistentAdminSettings> | null;
+          if (rawServer) {
+            const { settings: serverClean, didPurgeDemo } = sanitizeSettings(rawServer);
+            if (didPurgeDemo) cloudHadLegacyDemo = true;
+            if (serverClean.updatedAt > maxRemoteUpdatedAt) {
+              maxRemoteUpdatedAt = serverClean.updatedAt;
+            }
+            candidates.push(serverClean);
+          }
+        }
+      } catch {
+        // Normal on static hosting
       }
-    }
-  } catch {
-    // Ignore if unreachable
-  }
 
-  writeToLocalStorage(best);
-  await saveToIndexedDB(best);
-  return best;
+      // 3. Read Supabase permanent __admin_settings__ row directly
+      try {
+        const { data, error } = await supabase
+          .from("invoices")
+          .select("*")
+          .eq("id", ADMIN_SETTINGS_RECORD_ID)
+          .maybeSingle();
+
+        if (data && !error) {
+          let parsedEmail: any = {};
+          if (typeof data.email === "string" && data.email.trim().startsWith("{")) {
+            try {
+              parsedEmail = JSON.parse(data.email);
+            } catch {
+              parsedEmail = {};
+            }
+          }
+          const rawSupabase: Partial<PersistentAdminSettings> = {
+            tlList: Array.isArray(parsedEmail.tlList) ? parsedEmail.tlList : [],
+            trList: Array.isArray(parsedEmail.trList) ? parsedEmail.trList : [],
+            selectedTl:
+              typeof parsedEmail.selectedTl === "string"
+                ? parsedEmail.selectedTl
+                : typeof data.teamLeader === "string"
+                ? data.teamLeader
+                : "",
+            selectedTr:
+              typeof parsedEmail.selectedTr === "string"
+                ? parsedEmail.selectedTr
+                : typeof data.teamTrainer === "string"
+                ? data.teamTrainer
+                : "",
+            logoUrl: typeof data.logoUrl === "string" ? data.logoUrl : "",
+            hasLogo:
+              typeof parsedEmail.hasLogo === "boolean"
+                ? parsedEmail.hasLogo
+                : Boolean(data.logoUrl),
+            demoPurgedV2: Boolean(parsedEmail.demoPurgedV2),
+            updatedAt: typeof parsedEmail.updatedAt === "number" ? parsedEmail.updatedAt : 1,
+          };
+
+          const { settings: sbClean, didPurgeDemo } = sanitizeSettings(rawSupabase);
+          if (didPurgeDemo) cloudHadLegacyDemo = true;
+          if (sbClean.updatedAt > maxRemoteUpdatedAt) {
+            maxRemoteUpdatedAt = sbClean.updatedAt;
+          }
+          candidates.push(sbClean);
+        }
+      } catch (err) {
+        console.warn("Supabase hydration fetch warning:", err);
+      }
+
+      // Pick candidate with highest updatedAt (preferring later candidates i.e. cloud on ties)
+      let best = candidates[0];
+      for (let i = 1; i < candidates.length; i++) {
+        if (candidates[i].updatedAt >= best.updatedAt) {
+          best = candidates[i];
+        }
+      }
+
+      // Recover logoUrl if winning candidate dropped base64 string (e.g. localStorage quota) while hasLogo is true
+      if (!best.logoUrl && best.hasLogo !== false) {
+        for (let i = candidates.length - 1; i >= 0; i--) {
+          if (candidates[i].logoUrl) {
+            best = { ...best, logoUrl: candidates[i].logoUrl, hasLogo: true };
+            break;
+          }
+        }
+      }
+
+      memoryCache = best;
+      hasHydratedOnce = true;
+      writeToLocalStorage(best);
+      await saveToIndexedDB(best);
+
+      // Self-heal remote database if legacy demo names were cleaned up OR if local explicit save is newer than cloud
+      if (cloudHadLegacyDemo || (best.updatedAt > 0 && best.updatedAt > maxRemoteUpdatedAt)) {
+        const healed: PersistentAdminSettings = cloudHadLegacyDemo
+          ? { ...best, updatedAt: Math.max(Date.now(), best.updatedAt + 1) }
+          : best;
+        memoryCache = healed;
+        writeToLocalStorage(healed);
+        await saveToIndexedDB(healed);
+        await syncSettingsToRemote(healed);
+      }
+
+      return memoryCache;
+    } finally {
+      activeHydrationPromise = null;
+    }
+  })();
+
+  return activeHydrationPromise;
 }
 
 /**
  * Resize and optimize uploaded logo image while preserving crisp alpha transparency
- * so even 10MB PNG/JPG files save permanently without hitting browser storage limits.
+ * so PNG/WebP/JPG files save swiftly and permanently across Supabase, IndexedDB, and localStorage.
  */
-export function optimizeLogoImageToDataUrl(file: File, maxDim = 512): Promise<string> {
+export function optimizeLogoImageToDataUrl(file: File, maxDim = 400): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = (err) => reject(err);
@@ -292,7 +500,7 @@ export function optimizeLogoImageToDataUrl(file: File, maxDim = 512): Promise<st
         try {
           let width = img.naturalWidth || img.width;
           let height = img.naturalHeight || img.height;
-          if (width <= maxDim && height <= maxDim && rawDataUrl.length < 350_000) {
+          if (width <= maxDim && height <= maxDim && rawDataUrl.length < 180_000) {
             resolve(rawDataUrl);
             return;
           }
@@ -315,9 +523,15 @@ export function optimizeLogoImageToDataUrl(file: File, maxDim = 512): Promise<st
           }
           ctx.clearRect(0, 0, width, height);
           ctx.drawImage(img, 0, 0, width, height);
-          // Use PNG to preserve transparent logo backgrounds cleanly
-          const optimized = canvas.toDataURL("image/png");
-          resolve(optimized);
+
+          // Prefer lossless-alpha high-quality WebP for compact DB storage, fallback to PNG
+          const webpUrl = canvas.toDataURL("image/webp", 0.92);
+          if (webpUrl.startsWith("data:image/webp") && webpUrl.length < 300_000) {
+            resolve(webpUrl);
+            return;
+          }
+          const pngUrl = canvas.toDataURL("image/png");
+          resolve(pngUrl);
         } catch {
           resolve(rawDataUrl);
         }

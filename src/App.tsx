@@ -8,7 +8,6 @@ import {
   ADMIN_SETTINGS_RECORD_ID,
   getInitialAdminSettingsSync,
   hydratePermanentAdminSettings,
-  savePermanentAdminSettings,
 } from "./utils/adminStorage";
 import {
   ShieldCheck,
@@ -44,8 +43,8 @@ const DEFAULT_INVOICE_DATA: InvoiceData = {
   phone: "01863091123",
   referralCode: "4845156",
   teamCode: "336251",
-  teamLeader: "Sabbir Ahmed",
-  teamTrainer: "Nafis Iqbal",
+  teamLeader: "",
+  teamTrainer: "",
   cashback: "300",
   amountPaid: "599",
   paymentMethod: "Bkash",
@@ -143,8 +142,8 @@ export default function App() {
     return {
       ...DEFAULT_INVOICE_DATA,
       paymentMethod: savedPaymentMethod || DEFAULT_INVOICE_DATA.paymentMethod || "Bkash",
-      teamTrainer: initialSettings.selectedTr || DEFAULT_INVOICE_DATA.teamTrainer || "Nafis Iqbal",
-      teamLeader: initialSettings.selectedTl || DEFAULT_INVOICE_DATA.teamLeader || "Sabbir Ahmed",
+      teamTrainer: initialSettings.selectedTr || "",
+      teamLeader: initialSettings.selectedTl || "",
       date: getTodayFormattedDate(),
       logoUrl: initialSettings.logoUrl || "",
     };
@@ -225,32 +224,25 @@ export default function App() {
     }
   };
 
-  // Hydrate permanent logo & selected TL/TR from IndexedDB / Server / Supabase on mount
+  // Hydrate permanent logo & selected TL/TR from IndexedDB / Server / Supabase on mount (Admin Dashboard only)
   useEffect(() => {
+    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("id")) {
+      return;
+    }
     let mounted = true;
     hydratePermanentAdminSettings().then((persisted) => {
       if (!mounted) return;
       setInvoiceData((prev) => ({
         ...prev,
-        logoUrl: persisted.logoUrl || prev.logoUrl || "",
-        teamLeader: persisted.selectedTl || prev.teamLeader || "",
-        teamTrainer: persisted.selectedTr || prev.teamTrainer || "",
+        logoUrl: persisted.logoUrl || "",
+        teamLeader: persisted.selectedTl || "",
+        teamTrainer: persisted.selectedTr || "",
       }));
     });
     return () => {
       mounted = false;
     };
   }, []);
-
-  // Persist selected TL / TR whenever changed
-  useEffect(() => {
-    if (invoiceData.teamLeader || invoiceData.teamTrainer) {
-      savePermanentAdminSettings({
-        selectedTl: invoiceData.teamLeader || "",
-        selectedTr: invoiceData.teamTrainer || "",
-      });
-    }
-  }, [invoiceData.teamLeader, invoiceData.teamTrainer]);
 
   // Check URL query parameters for verification ID (?id=...)
   useEffect(() => {

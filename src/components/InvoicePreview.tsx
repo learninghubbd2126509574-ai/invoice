@@ -67,8 +67,8 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
     phone = "01952390826",
     referralCode = "5373259",
     teamCode = "336251",
-    teamLeader = "Sanjida Alam",
-    teamTrainer = "Khadija Akter",
+    teamLeader = "",
+    teamTrainer = "",
     cashback = "300",
     amountPaid = "499",
     paymentMethod = "Bkash",
@@ -114,10 +114,10 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
          ========================================================= */}
       <div className="px-9 pt-7 pb-4 flex items-center justify-between relative z-20">
         {/* Left: Emblem + Brand Typography */}
-        <div className="flex items-center gap-4 min-w-0">
+        <div className="flex items-center gap-2 min-w-0">
           <div className="shrink-0">
             {logoUrl ? (
-              <div className="w-[68px] h-[68px] rounded-full bg-white border border-slate-200 p-1 flex items-center justify-center overflow-hidden shadow-xs">
+              <div className="w-[66px] h-[66px] rounded-full bg-white border border-slate-200/90 p-0.5 flex items-center justify-center overflow-hidden shadow-xs">
                 <img
                   src={logoUrl}
                   alt={trimmedCompany}
@@ -126,7 +126,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
                 />
               </div>
             ) : (
-              <UnityEarningEmblem className="w-[68px] h-[68px]" />
+              <UnityEarningEmblem className="w-[66px] h-[66px] -mr-0.5" />
             )}
           </div>
 
