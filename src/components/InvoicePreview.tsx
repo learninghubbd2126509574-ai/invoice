@@ -109,17 +109,6 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
       id="invoice-capture-area"
       className="w-[680px] bg-white text-[#0E2954] flex flex-col font-sans select-none mx-auto relative overflow-hidden"
     >
-      {/* TOP-RIGHT LAYERED CORPORATE CORNER RIBBON */}
-      <svg
-        viewBox="0 0 160 120"
-        className="absolute top-0 right-0 w-[152px] h-[114px] pointer-events-none z-10"
-        aria-hidden="true"
-      >
-        <polygon points="48,0 105,0 160,55 160,92 128,60" fill="#CDE3EE" opacity="0.85" />
-        <polygon points="88,0 160,0 160,72" fill="#0F3460" />
-        <polygon points="122,38 160,76 160,96 122,58" fill="#27AE60" />
-      </svg>
-
       {/* =========================================================
           1. TOP HEADER: BRAND LOCKUP + VERIFIED & SECURE SEAL
          ========================================================= */}
@@ -165,7 +154,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
         </div>
 
         {/* Right: Vertical Hairline + Verified & Secure Badge */}
-        <div className="flex items-center gap-5 pr-5 shrink-0">
+        <div className="flex items-center gap-5 shrink-0">
           <div className="h-14 w-[1px] bg-[#CBD5E1]" aria-hidden="true" />
           <div className="flex items-center gap-2.5">
             <svg viewBox="0 0 36 40" className="w-8 h-9 shrink-0" aria-hidden="true">
@@ -564,9 +553,9 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
           5. THREE RAISED, EXECUTIVE FINANCIAL SUMMARY CARDS
          ========================================================= */}
       <div className="px-9 pt-3.5 grid grid-cols-3 gap-3.5">
-        {/* Card 1: Cashback Received (Raised & Balanced) */}
-        <div className="rounded-xl border border-[#C6D6E8] border-t-2 border-t-[#22A559] bg-gradient-to-b from-white to-[#F8FAFD] px-3.5 py-3 flex items-center gap-3 shadow-[0_2px_8px_rgba(14,41,84,0.04)]">
-          <div className="w-10 h-10 rounded-xl bg-[#22A559] text-white flex items-center justify-center shrink-0 shadow-2xs">
+        {/* Card 1: Cashback Received (Emerald Green Accent) */}
+        <div className="overflow-hidden rounded-xl border border-[#C6D6E8] border-t-2 border-t-[#16A34A] bg-gradient-to-b from-white to-[#F8FAFD] px-3.5 py-3 flex items-center gap-3 shadow-[0_2px_8px_rgba(14,41,84,0.04)]">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#22C55E] to-[#15803D] text-white flex items-center justify-center shrink-0 shadow-[0_3px_8px_rgba(22,163,74,0.22)]">
             <svg
               viewBox="0 0 24 24"
               className="w-5 h-5 fill-none stroke-current"
@@ -600,9 +589,9 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
           </div>
         </div>
 
-        {/* Card 2: Payment Method (Official Brand Mark, Raised & Balanced) */}
-        <div className="rounded-xl border border-[#C6D6E8] border-t-2 border-t-[#1565D8] bg-gradient-to-b from-white to-[#F8FAFD] px-3.5 py-3 flex items-center gap-3 shadow-[0_2px_8px_rgba(14,41,84,0.04)]">
-          <div className="w-10 h-10 rounded-xl bg-[#123E75] text-white flex items-center justify-center shrink-0 shadow-2xs">
+        {/* Card 2: Payment Method (Vibrant Royal Blue Accent) */}
+        <div className="overflow-hidden rounded-xl border border-[#C6D6E8] border-t-2 border-t-[#2563EB] bg-gradient-to-b from-white to-[#F8FAFD] px-3.5 py-3 flex items-center gap-3 shadow-[0_2px_8px_rgba(14,41,84,0.04)]">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#3B82F6] to-[#1D4ED8] text-white flex items-center justify-center shrink-0 shadow-[0_3px_8px_rgba(37,99,235,0.22)]">
             <svg
               viewBox="0 0 24 24"
               className="w-5 h-5 fill-none stroke-current"
@@ -611,7 +600,8 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
             >
               <rect x="2.5" y="5" width="19" height="14" rx="2.5" />
               <line x1="2.5" y1="9.5" x2="21.5" y2="9.5" />
-              <circle cx="16.5" cy="14.2" r="1.3" fill="currentColor" stroke="none" />
+              <line x1="6.5" y1="14.5" x2="10.5" y2="14.5" strokeLinecap="round" />
+              <circle cx="17" cy="14.5" r="1.3" fill="currentColor" stroke="none" />
             </svg>
           </div>
 
@@ -619,27 +609,29 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
             <span className="text-[9.5px] font-extrabold text-[#476282] tracking-[0.06em] uppercase leading-none">
               PAYMENT METHOD
             </span>
-            <div className="mt-1 flex items-center">
+            <div className="mt-1 flex items-center max-w-full">
               <InvoicePaymentMark method={paymentMethod} />
             </div>
-            <span className="mt-1 text-[9px] font-bold text-[#334E68] bg-[#EAF2FD] border border-[#D4E4FA] px-2 py-0.5 rounded-full leading-none whitespace-nowrap">
+            <span className="mt-1 text-[9px] font-bold text-[#1E40AF] bg-[#EFF6FF] border border-[#BFDBFE] px-2 py-0.5 rounded-full leading-none whitespace-nowrap">
               Paid via {paymentDisplayName}
             </span>
           </div>
         </div>
 
-        {/* Card 3: Amount Paid (Raised & Balanced) */}
-        <div className="rounded-xl border border-[#C6D6E8] border-t-2 border-t-[#0E2954] bg-gradient-to-b from-white to-[#F8FAFD] px-3.5 py-3 flex items-center gap-3 shadow-[0_2px_8px_rgba(14,41,84,0.04)]">
-          <div className="w-10 h-10 rounded-xl bg-[#0E2954] text-white flex items-center justify-center shrink-0 shadow-2xs">
+        {/* Card 3: Amount Paid (Executive Onyx-Black Accent) */}
+        <div className="overflow-hidden rounded-xl border border-[#C6D6E8] border-t-2 border-t-[#181B20] bg-gradient-to-b from-white to-[#F8FAFD] px-3.5 py-3 flex items-center gap-3 shadow-[0_2px_8px_rgba(14,41,84,0.04)]">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#2D3139] to-[#111317] text-white flex items-center justify-center shrink-0 shadow-[0_3px_8px_rgba(17,19,23,0.24)]">
             <svg
               viewBox="0 0 24 24"
               className="w-5 h-5 fill-none stroke-current"
               strokeWidth="2.1"
+              strokeLinecap="round"
+              strokeLinejoin="round"
               aria-hidden="true"
             >
-              <path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2" />
-              <rect x="14" y="10" width="8" height="5" rx="1.5" />
-              <circle cx="16.8" cy="12.5" r="0.9" fill="currentColor" stroke="none" />
+              <rect x="2.5" y="6" width="19" height="12" rx="2.2" />
+              <circle cx="12" cy="12" r="2.7" />
+              <path d="M6 9.5h.01M18 14.5h.01" strokeWidth="2.6" />
             </svg>
           </div>
 

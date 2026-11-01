@@ -5,18 +5,33 @@ interface LogoProps {
   className?: string;
 }
 
+const BkashOrigamiBird: React.FC<{ className?: string }> = ({ className = "w-6 h-5" }) => (
+  <svg viewBox="0 0 62 54" className={`shrink-0 ${className}`} aria-hidden="true">
+    {/* Main swept upper-left origami wing */}
+    <polygon points="3,3 30,19 20,31" fill="#E2136E" />
+    {/* Secondary upper wing fold */}
+    <polygon points="27,4 38,21 30,19" fill="#F04E98" />
+    {/* Deep crimson central body crease */}
+    <polygon points="20,31 30,19 38,21" fill="#B80D57" />
+    {/* Bright magenta lower body / chest facet */}
+    <polygon points="20,31 38,21 33,38" fill="#E2136E" />
+    {/* Head & neck origami fold */}
+    <polygon points="38,21 48,21.5 35.6,29" fill="#C40F5C" />
+    {/* Slender right-pointing hummingbird beak */}
+    <polygon points="48,21.5 60,24.8 44.2,24.2" fill="#E2136E" />
+    {/* Swept lower-left tail feather */}
+    <polygon points="20,31 33,38 18,51" fill="#C20E5A" />
+    {/* Lower tail flare facet */}
+    <polygon points="33,38 40,46 28,43" fill="#F04E98" />
+  </svg>
+);
+
 export const BkashLogo: React.FC<LogoProps> = ({ className = "h-6" }) => (
-  <div className={`inline-flex items-center gap-1.5 select-none ${className}`}>
-    <span className="text-[15px] font-extrabold tracking-[-0.02em] text-[#1E293B] leading-none">
-      <span className="text-[#E2136E]">b</span>Kash
+  <div className={`inline-flex items-center gap-1 select-none ${className}`}>
+    <span className="text-[15px] font-bold tracking-[-0.02em] text-[#E2136E] leading-none">
+      bKash
     </span>
-    <svg viewBox="0 0 42 34" className="w-5 h-4 shrink-0" aria-hidden="true">
-      <polygon points="3,2 21,13 14,20" fill="#E2136E" />
-      <polygon points="21,13 31,6 24,22" fill="#B50D57" />
-      <polygon points="14,20 24,22 16,32" fill="#E2136E" />
-      <polygon points="31,6 40,10 30,14" fill="#F4549C" />
-      <polygon points="24,22 33,20 26,27" fill="#C91060" />
-    </svg>
+    <BkashOrigamiBird className="w-[22px] h-[19px]" />
   </div>
 );
 
@@ -48,7 +63,7 @@ export const RocketLogo: React.FC<LogoProps> = ({ className = "h-6" }) => (
       <circle cx="19.2" cy="12.8" r="2.1" fill="#FFFFFF" />
       <path d="M8.5 20.2 L4.5 26.5 L11 22.8 Z" fill="#F59E0B" />
     </svg>
-    <span className="text-[14px] font-black italic tracking-[0.04em] text-[#8C3494] leading-none">
+    <span className="text-[14px] font-extrabold not-italic tracking-[0.02em] text-[#8C3494] leading-none">
       ROCKET
     </span>
   </div>
@@ -66,7 +81,7 @@ export const BankLogo: React.FC<LogoProps> = ({ className = "h-6" }) => (
   <div className={`inline-flex items-center gap-1.5 select-none ${className}`}>
     <svg
       viewBox="0 0 24 24"
-      className="w-4 h-4 text-[#0E2954] fill-none stroke-current shrink-0"
+      className="w-4 h-4 text-[#1D4ED8] fill-none stroke-current shrink-0"
       strokeWidth="2.1"
       aria-hidden="true"
     >
@@ -76,8 +91,8 @@ export const BankLogo: React.FC<LogoProps> = ({ className = "h-6" }) => (
         strokeLinejoin="round"
       />
     </svg>
-    <span className="text-[13px] font-extrabold text-[#0E2954] tracking-tight leading-none">
-      Bank Transfer
+    <span className="text-[14px] font-extrabold text-[#1E3A8A] tracking-tight leading-none">
+      Bank
     </span>
   </div>
 );
@@ -135,7 +150,7 @@ export const getPaymentMethodDisplayName = (method: InvoiceData["paymentMethod"]
     case "Upay":
       return "Upay";
     case "Bank":
-      return "Bank Transfer";
+      return "Bank";
     case "Upi":
       return "UPI";
     case "Google pay":
@@ -154,31 +169,19 @@ export const InvoicePaymentMark: React.FC<{
   switch (method) {
     case "Bkash":
       return (
-        <div className="inline-flex items-center gap-1.5 select-none h-[26px]">
-          <span className="text-[20px] font-bold tracking-[-0.03em] leading-none text-[#231F20]">
-            <span className="text-[#E2136E] font-extrabold">b</span>Kash
+        <div className="inline-flex items-center gap-1 select-none h-[26px]">
+          <span className="text-[19px] font-bold tracking-[-0.025em] leading-none text-[#E2136E]">
+            bKash
           </span>
-          {/* Crisp Multi-Faceted bKash Origami Hummingbird */}
-          <svg viewBox="0 0 44 34" className="w-[30px] h-[24px] shrink-0" aria-hidden="true">
-            {/* Upper main wing */}
-            <polygon points="4,1 22,13 15,20" fill="#E2136E" />
-            {/* Center body fold */}
-            <polygon points="22,13 32,6 25,22" fill="#B60E57" />
-            {/* Head & beak */}
-            <polygon points="32,6 42,10 31,14" fill="#F04E98" />
-            {/* Lower tail feather */}
-            <polygon points="15,20 25,22 17,33" fill="#E2136E" />
-            {/* Forward chest facet */}
-            <polygon points="25,22 35,20 27,28" fill="#CE1162" />
-          </svg>
+          <BkashOrigamiBird className="w-[27px] h-[23px]" />
         </div>
       );
 
     case "Rocket":
       return (
         <div className="inline-flex items-center gap-1.5 select-none h-[26px]">
-          {/* Unboxed Official-Style DBBL Rocket Vector Swoosh + Launching Rocket */}
-          <svg viewBox="0 0 34 32" className="w-[24px] h-[24px] shrink-0" aria-hidden="true">
+          {/* Unboxed Official-Style DBBL Rocket Emblem + Upright Wordmark */}
+          <svg viewBox="0 0 34 32" className="w-[22px] h-[22px] shrink-0" aria-hidden="true">
             <path
               d="M4 25 C10 29 20 27.5 27 19.5"
               fill="none"
@@ -193,7 +196,7 @@ export const InvoicePaymentMark: React.FC<{
             <circle cx="20.2" cy="12" r="2.2" fill="#FFFFFF" />
             <path d="M8.5 20.5 L4 27.5 L11.2 23.2 Z" fill="#F59E0B" />
           </svg>
-          <span className="text-[18.5px] font-black italic tracking-[0.02em] leading-none text-[#8C3494]">
+          <span className="text-[17px] font-extrabold not-italic tracking-[0.015em] leading-none text-[#8C3494]">
             ROCKET
           </span>
         </div>
@@ -247,7 +250,7 @@ export const InvoicePaymentMark: React.FC<{
         <div className="inline-flex items-center gap-1.5 select-none h-[26px]">
           <svg
             viewBox="0 0 24 24"
-            className="w-[21px] h-[21px] text-[#0E2954] fill-none stroke-current shrink-0"
+            className="w-[20px] h-[20px] text-[#1D4ED8] fill-none stroke-current shrink-0"
             strokeWidth="2.1"
             aria-hidden="true"
           >
@@ -257,8 +260,8 @@ export const InvoicePaymentMark: React.FC<{
               strokeLinejoin="round"
             />
           </svg>
-          <span className="text-[15.5px] font-extrabold tracking-[-0.01em] text-[#0E2954] leading-none whitespace-nowrap">
-            Bank Transfer
+          <span className="text-[18px] font-extrabold tracking-[-0.015em] text-[#1E3A8A] leading-none whitespace-nowrap">
+            Bank
           </span>
         </div>
       );
@@ -305,10 +308,11 @@ export const InvoicePaymentMark: React.FC<{
 
     default:
       return (
-        <div className="inline-flex items-center gap-1.5 select-none h-[26px]">
-          <span className="text-[20px] font-bold tracking-[-0.03em] leading-none text-[#231F20]">
-            <span className="text-[#E2136E] font-extrabold">b</span>Kash
+        <div className="inline-flex items-center gap-1 select-none h-[26px]">
+          <span className="text-[19px] font-bold tracking-[-0.025em] leading-none text-[#E2136E]">
+            bKash
           </span>
+          <BkashOrigamiBird className="w-[27px] h-[23px]" />
         </div>
       );
   }
