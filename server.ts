@@ -263,31 +263,66 @@ app.get("/api/invoices/:id", async (req, res) => {
   }
 });
 
-// Clear Database Endpoint
+const ADMIN_SETTINGS_FILE = path.join(process.cwd(), ".admin-settings.json");
+const ADMIN_SETTINGS_ID = "__admin_settings__";
+
+app.get("/api/admin-settings", (req, res) => {
+  try {
+    if (fs.existsSync(ADMIN_SETTINGS_FILE)) {
+      const raw = fs.readFileSync(ADMIN_SETTINGS_FILE, "utf-8");
+      return res.json(JSON.parse(raw));
+    }
+    if (memoryDb[ADMIN_SETTINGS_ID]) {
+      return res.json(memoryDb[ADMIN_SETTINGS_ID]);
+    }
+    return res.json(null);
+  } catch (err: any) {
+    console.error("Failed reading admin settings file:", err);
+    return res.json(null);
+  }
+});
+
+app.post("/api/admin-settings", (req, res) => {
+  try {
+    const payload = req.body;
+    memoryDb[ADMIN_SETTINGS_ID] = payload;
+    try {
+      fs.writeFileSync(ADMIN_SETTINGS_FILE, JSON.stringify(payload, null, 2), "utf-8");
+    } catch (fsErr) {
+      console.warn("Could not write .admin-settings.json (read-only fs fallback to memory):", fsErr);
+    }
+    return res.json({ success: true });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// Clear Database Endpoint (Preserves permanent __admin_settings__)
 app.post("/api/clear-database", async (req, res) => {
   try {
     let clearedSupabaseCount = 0;
     if (supabaseInitialized && supabase) {
       try {
-        // Delete all rows from invoices table (where id is not empty)
-        const { error, data } = await supabase
+        // Delete invoice rows while strictly keeping permanent __admin_settings__
+        const { error } = await supabase
           .from("invoices")
           .delete()
-          .neq("id", "0");
+          .neq("id", "0")
+          .neq("id", ADMIN_SETTINGS_ID);
 
         if (error) {
           throw error;
         }
-        console.log("Cleared documents from Supabase.");
-        clearedSupabaseCount = 1; // Mark as successfully cleared
+        console.log("Cleared invoice documents from Supabase (preserved admin settings).");
+        clearedSupabaseCount = 1;
       } catch (supabaseError: any) {
         console.error("Supabase clear failed:", supabaseError);
         throw new Error(`Supabase clear failed: ${supabaseError.message}`);
       }
     }
 
-    // Clear memory database
-    const memoryKeys = Object.keys(memoryDb);
+    // Clear memory database except __admin_settings__
+    const memoryKeys = Object.keys(memoryDb).filter((k) => k !== ADMIN_SETTINGS_ID);
     memoryKeys.forEach((key) => {
       delete memoryDb[key];
     });
@@ -297,7 +332,7 @@ app.post("/api/clear-database", async (req, res) => {
       success: true,
       message: "Database cleared successfully.",
       clearedSupabaseCount,
-      clearedMemoryCount: memoryKeys.length
+      clearedMemoryCount: memoryKeys.length,
     });
   } catch (error: any) {
     console.error("Error clearing database:", error);

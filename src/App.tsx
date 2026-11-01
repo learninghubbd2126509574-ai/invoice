@@ -5,6 +5,12 @@ import { InvoicePreview } from "./components/InvoicePreview";
 import { PaymentMethodLogo } from "./components/BrandLogos";
 import { getTodayFormattedDate } from "./utils/dateUtils";
 import {
+  ADMIN_SETTINGS_RECORD_ID,
+  getInitialAdminSettingsSync,
+  hydratePermanentAdminSettings,
+  savePermanentAdminSettings,
+} from "./utils/adminStorage";
+import {
   ShieldCheck,
   Database,
   HelpCircle,
@@ -49,42 +55,70 @@ const DEFAULT_INVOICE_DATA: InvoiceData = {
   date: getTodayFormattedDate(),
 };
 
-const ScaleWrapper = ({ children, maxWidth = 330 }: { children: React.ReactNode; maxWidth?: number }) => {
+const INVOICE_BASE_WIDTH = 680;
+
+const ScaleWrapper = ({
+  children,
+  maxWidth = 440,
+  explicitScale,
+}: {
+  children: React.ReactNode;
+  maxWidth?: number;
+  explicitScale?: number;
+}) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(0.5);
+  const innerRef = useRef<HTMLDivElement>(null);
+  const [autoScale, setAutoScale] = useState(0.58);
+  const [docHeight, setDocHeight] = useState(980);
 
   useEffect(() => {
+    if (explicitScale !== undefined) return;
     const handleResize = () => {
       if (containerRef.current) {
         const parentWidth = containerRef.current.parentElement?.clientWidth || maxWidth;
         const availableWidth = Math.min(parentWidth - 8, maxWidth);
-        const currentScale = availableWidth / 640;
-        setScale(currentScale);
+        setAutoScale(availableWidth / INVOICE_BASE_WIDTH);
       }
     };
 
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, [maxWidth]);
+  }, [maxWidth, explicitScale]);
+
+  useEffect(() => {
+    const el = innerRef.current;
+    if (!el) return;
+    const updateHeight = () => {
+      if (el.offsetHeight > 0) {
+        setDocHeight(el.offsetHeight);
+      }
+    };
+    updateHeight();
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [children]);
+
+  const activeScale = explicitScale !== undefined ? explicitScale : autoScale;
 
   return (
     <div ref={containerRef} className="w-full flex justify-center items-center">
       <div
         style={{
-          width: `${640 * scale}px`,
-          height: `${1120 * scale}px`,
+          width: `${INVOICE_BASE_WIDTH * activeScale}px`,
+          height: `${docHeight * activeScale}px`,
           overflow: "hidden",
           position: "relative",
         }}
-        className="flex-shrink-0 transition-all duration-200 rounded-[1.8rem]"
+        className="flex-shrink-0 transition-all duration-200 bg-white shadow-[0_20px_50px_rgba(14,41,84,0.16)] ring-1 ring-slate-200/90"
       >
         <div
+          ref={innerRef}
           style={{
-            transform: `scale(${scale})`,
+            transform: `scale(${activeScale})`,
             transformOrigin: "top left",
-            width: "640px",
-            height: "1120px",
+            width: `${INVOICE_BASE_WIDTH}px`,
             position: "absolute",
             top: 0,
             left: 0,
@@ -99,12 +133,9 @@ const ScaleWrapper = ({ children, maxWidth = 330 }: { children: React.ReactNode;
 
 export default function App() {
   const [invoiceData, setInvoiceData] = useState<InvoiceData>(() => {
-    let savedTr = "";
-    let savedTl = "";
+    const initialSettings = getInitialAdminSettingsSync();
     let savedPaymentMethod: any = "";
     try {
-      savedTr = localStorage.getItem("last_selected_team_trainer") || "";
-      savedTl = localStorage.getItem("last_selected_team_leader") || "";
       savedPaymentMethod = localStorage.getItem("last_selected_payment_method") || "";
     } catch (e) {
       console.error(e);
@@ -112,10 +143,10 @@ export default function App() {
     return {
       ...DEFAULT_INVOICE_DATA,
       paymentMethod: savedPaymentMethod || DEFAULT_INVOICE_DATA.paymentMethod || "Bkash",
-      teamTrainer: savedTr || DEFAULT_INVOICE_DATA.teamTrainer || "Nafis Iqbal",
-      teamLeader: savedTl || DEFAULT_INVOICE_DATA.teamLeader || "Sabbir Ahmed",
+      teamTrainer: initialSettings.selectedTr || DEFAULT_INVOICE_DATA.teamTrainer || "Nafis Iqbal",
+      teamLeader: initialSettings.selectedTl || DEFAULT_INVOICE_DATA.teamLeader || "Sabbir Ahmed",
       date: getTodayFormattedDate(),
-      logoUrl: localStorage.getItem("company_logo") || "", // Empty string to use nice SVG fallback until user uploads
+      logoUrl: initialSettings.logoUrl || "",
     };
   });
   const [isSaving, setIsSaving] = useState(false);
@@ -129,7 +160,9 @@ export default function App() {
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [showFullGraphicReceipt, setShowFullGraphicReceipt] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
-  const [phoneScale, setPhoneScale] = useState<number>(0.42);
+  const [phoneScale, setPhoneScale] = useState<number>(() =>
+    typeof window !== "undefined" && window.innerWidth < 640 ? 0.46 : 0.62
+  );
 
   // Custom dialogs/notifications
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -152,9 +185,13 @@ export default function App() {
     setShowClearConfirm(false);
     setIsClearing(true);
     try {
-      // Direct Supabase clear (works on Vercel)
+      // Direct Supabase clear (preserves permanent __admin_settings__ row)
       try {
-        await supabase.from("invoices").delete().neq("id", "0");
+        await supabase
+          .from("invoices")
+          .delete()
+          .neq("id", "0")
+          .neq("id", ADMIN_SETTINGS_RECORD_ID);
       } catch (sbClearErr) {
         console.warn("Direct Supabase clear warning:", sbClearErr);
       }
@@ -168,11 +205,15 @@ export default function App() {
         console.warn("Backend API clear warning (normal on static Vercel):", apiErr);
       }
 
-      showToast("ডাটাবেজ সফলভাবে সম্পূর্ণ ক্লিয়ার করা হয়েছে!", "success");
+      showToast("ডাটাবেজ ক্লিয়ার হয়েছে! (লোগো ও TL/TR সেভ রাখা হয়েছে)", "success");
       setInvoiceData((prev) => ({
         ...DEFAULT_INVOICE_DATA,
-        teamTrainer: prev.teamTrainer || localStorage.getItem("last_selected_team_trainer") || "Nafis Iqbal",
-        teamLeader: prev.teamLeader || localStorage.getItem("last_selected_team_leader") || "Sabbir Ahmed",
+        paymentMethod: prev.paymentMethod || DEFAULT_INVOICE_DATA.paymentMethod,
+        teamTrainer: prev.teamTrainer || "",
+        teamLeader: prev.teamLeader || "",
+        logoUrl: prev.logoUrl || "",
+        companyName: prev.companyName || DEFAULT_INVOICE_DATA.companyName,
+        companyWebsite: prev.companyWebsite || DEFAULT_INVOICE_DATA.companyWebsite,
         date: getTodayFormattedDate(),
       }));
       setGeneratedId(null);
@@ -184,26 +225,32 @@ export default function App() {
     }
   };
 
-  // Load logoUrl from localStorage on mount
+  // Hydrate permanent logo & selected TL/TR from IndexedDB / Server / Supabase on mount
   useEffect(() => {
-    const savedLogo = localStorage.getItem("company_logo");
-    if (savedLogo) {
-      setInvoiceData((prev) => ({ ...prev, logoUrl: savedLogo }));
-    }
+    let mounted = true;
+    hydratePermanentAdminSettings().then((persisted) => {
+      if (!mounted) return;
+      setInvoiceData((prev) => ({
+        ...prev,
+        logoUrl: persisted.logoUrl || prev.logoUrl || "",
+        teamLeader: persisted.selectedTl || prev.teamLeader || "",
+        teamTrainer: persisted.selectedTr || prev.teamTrainer || "",
+      }));
+    });
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  // Sync state variables to localStorage whenever they change
+  // Persist selected TL / TR whenever changed
   useEffect(() => {
-    if (invoiceData.logoUrl) {
-      localStorage.setItem("company_logo", invoiceData.logoUrl);
+    if (invoiceData.teamLeader || invoiceData.teamTrainer) {
+      savePermanentAdminSettings({
+        selectedTl: invoiceData.teamLeader || "",
+        selectedTr: invoiceData.teamTrainer || "",
+      });
     }
-    if (invoiceData.teamLeader) {
-      localStorage.setItem("last_selected_team_leader", invoiceData.teamLeader);
-    }
-    if (invoiceData.teamTrainer) {
-      localStorage.setItem("last_selected_team_trainer", invoiceData.teamTrainer);
-    }
-  }, [invoiceData.logoUrl, invoiceData.teamLeader, invoiceData.teamTrainer]);
+  }, [invoiceData.teamLeader, invoiceData.teamTrainer]);
 
   // Check URL query parameters for verification ID (?id=...)
   useEffect(() => {
@@ -373,12 +420,19 @@ export default function App() {
 
     setDownloading(true);
     try {
+      if (document.fonts && document.fonts.ready) {
+        await document.fonts.ready;
+      }
       const dataUrl = await toPng(element, {
         quality: 1.0,
         pixelRatio: 3,
+        backgroundColor: "#ffffff",
+        width: element.offsetWidth,
+        height: element.offsetHeight,
         style: {
-          transform: "scale(1)",
-          borderRadius: "2rem",
+          transform: "none",
+          transformOrigin: "top left",
+          borderRadius: "0px",
         },
       });
 
@@ -717,23 +771,22 @@ export default function App() {
 
           {/* Right Block: Live high fidelity preview (takes 7 cols) with dynamic smartphone frame */}
           <div className="lg:col-span-7 flex flex-col items-center gap-5">
-            <div className="w-full flex justify-between items-center px-4">
-              <span className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping"></span>
-                রিয়েল-টাইম লাইভ ইনভয়েস প্রিভিউ (Live Preview)
+            <div className="w-full flex justify-between items-center px-2">
+              <span className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                রিয়েল-টাইম ফরমাল ইনভয়েস প্রিভিউ (Official Document Preview)
               </span>
               <span className="text-[10px] font-bold text-[#0F4C81] bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-md">
-                MOBILE FRAME PREVIEW
+                FORMAL A4 RECEIPT
               </span>
             </div>
 
             {/* Dynamic Zoom Controller Panel inside main screen */}
-            <div className="w-full bg-white border border-slate-100 p-4 rounded-[2rem] flex flex-col gap-3 shadow-md text-slate-800">
+            <div className="w-full bg-white border border-slate-200/80 p-4 rounded-2xl flex flex-col gap-3 shadow-xs text-slate-800">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-black text-[#0F4C81] uppercase tracking-wider flex items-center gap-1.5">
-                  🔍 ইনভয়েস জুম কন্ট্রোল প্যানেল (Zoom Scale)
+                <span className="text-xs font-black text-[#0F4C81] uppercase tracking-wider">
+                  ইনভয়েস জুম কন্ট্রোল (Document Scale)
                 </span>
-                <span className="text-xs text-blue-800 font-extrabold bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-xl">
+                <span className="text-xs text-blue-800 font-extrabold bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-lg tabular-nums">
                   জুম সাইজ: {Math.round(phoneScale * 100)}%
                 </span>
               </div>
@@ -743,12 +796,12 @@ export default function App() {
                 <span className="text-[10px] font-bold text-slate-400">ছোট</span>
                 <input
                   type="range"
-                  min="0.25"
-                  max="0.80"
+                  min="0.35"
+                  max="0.90"
                   step="0.01"
                   value={phoneScale}
                   onChange={(e) => setPhoneScale(parseFloat(e.target.value))}
-                  className="flex-grow h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                  className="flex-grow h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-blue-600"
                 />
                 <span className="text-[10px] font-bold text-slate-400">বড়</span>
               </div>
@@ -756,18 +809,18 @@ export default function App() {
               {/* Quick Presets */}
               <div className="grid grid-cols-4 gap-2">
                 {[
-                  { label: "৩০% (ছোট)", value: 0.3 },
-                  { label: "৪০% (মিডিয়াম)", value: 0.4 },
-                  { label: "৫০% (বড়)", value: 0.5 },
-                  { label: "৬০% (ফুল)", value: 0.6 },
+                  { label: "৪৫% (কমপ্যাক্ট)", value: 0.45 },
+                  { label: "৫৫% (মিডিয়াম)", value: 0.55 },
+                  { label: "৬৫% (স্ট্যান্ডার্ড)", value: 0.65 },
+                  { label: "৮০% (বড় ভিউ)", value: 0.8 },
                 ].map((preset) => (
                   <button
                     key={preset.value}
                     type="button"
                     onClick={() => setPhoneScale(preset.value)}
-                    className={`py-1.5 px-2 rounded-xl text-[10px] font-black transition-all border ${
+                    className={`py-1.5 px-2 rounded-xl text-[10px] font-black transition-all border cursor-pointer whitespace-nowrap ${
                       Math.abs(phoneScale - preset.value) < 0.02
-                        ? "bg-gradient-to-r from-blue-600 to-[#0F4C81] text-white border-transparent shadow-md"
+                        ? "bg-gradient-to-r from-blue-600 to-[#0F4C81] text-white border-transparent shadow-sm"
                         : "bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200"
                     }`}
                   >
@@ -775,48 +828,13 @@ export default function App() {
                   </button>
                 ))}
               </div>
-
-              <div className="text-[9.5px] text-slate-500 text-center font-bold">
-                💡 আপনার স্ক্রিনের সাথে মেলাতে জুম এডজাস্ট করুন। পুরো ইনভয়েসের তথ্য ফ্রেমের ভেতরে দেখতে পাবেন এবং স্ক্রিনশট নিতে পারবেন।
-              </div>
             </div>
 
-            {/* Smartphone Frame Mockup with scaled down view */}
-            <div className="relative bg-slate-900 p-4 pb-6 pt-10 rounded-[3.5rem] shadow-3xl border-4 border-slate-800/95 max-w-full overflow-hidden flex flex-col items-center animate-fade-in">
-              {/* Speaker Grill */}
-              <div className="absolute top-3 left-1/2 -translate-x-1/2 w-20 h-4 bg-slate-950 rounded-full z-20 flex items-center justify-center border border-slate-800">
-                <div className="w-12 h-1 bg-slate-800 rounded-full"></div>
-              </div>
-
-              {/* Camera Lens */}
-              <div className="absolute top-3.5 left-1/3 w-3 h-3 bg-slate-950 rounded-full z-20 border border-slate-800"></div>
-
-              {/* Internal Screen Area containing dynamically scaled Invoice - 1280px height for complete fitting */}
-              <div className="rounded-[2.4rem] overflow-hidden bg-slate-950 border border-slate-950 p-1 flex justify-center items-center">
-                <div
-                  style={{
-                    width: `${640 * phoneScale}px`,
-                    height: `${1280 * phoneScale}px`,
-                    overflow: "hidden",
-                    position: "relative",
-                  }}
-                  className="flex-shrink-0 transition-all duration-200 rounded-[1.8rem]"
-                >
-                  <div
-                    style={{
-                      transform: `scale(${phoneScale})`,
-                      transformOrigin: "top left",
-                      width: "640px",
-                      height: "1280px",
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                    }}
-                  >
-                    <InvoicePreview data={invoiceData} />
-                  </div>
-                </div>
-              </div>
+            {/* Executive Formal Document Presentation Stage */}
+            <div className="w-full bg-slate-200/60 border border-slate-200/90 rounded-2xl p-4 sm:p-6 flex flex-col items-center justify-center overflow-x-auto">
+              <ScaleWrapper explicitScale={phoneScale}>
+                <InvoicePreview data={invoiceData} />
+              </ScaleWrapper>
             </div>
 
             <div className="flex items-center gap-1.5 text-slate-400 text-[11px] font-semibold">
@@ -900,42 +918,18 @@ export default function App() {
             </button>
           </div>
 
-          {/* Smartphone Frame Mockup with scaled down view */}
-          <div className="relative bg-slate-900 p-4 pb-6 pt-10 rounded-[3.5rem] shadow-3xl border-4 border-slate-800/90 max-w-full overflow-hidden mb-16 flex flex-col items-center">
-            {/* Speaker Grill */}
-            <div className="absolute top-3 left-1/2 -translate-x-1/2 w-20 h-4 bg-slate-950 rounded-full z-20 flex items-center justify-center border border-slate-800">
-              <div className="w-12 h-1 bg-slate-800 rounded-full"></div>
-            </div>
-
-            {/* Camera Lens */}
-            <div className="absolute top-3.5 left-1/3 w-3 h-3 bg-slate-950 rounded-full z-20 border border-slate-800"></div>
-
-            {/* Internal Screen Area containing dynamically scaled Invoice */}
-            <div className="rounded-[2.4rem] overflow-hidden bg-slate-950 border border-slate-950 p-1 flex justify-center items-center">
-              <div
-                style={{
-                  width: `${640 * phoneScale}px`,
-                  height: `${1280 * phoneScale}px`,
-                  overflow: "hidden",
-                  position: "relative",
-                }}
-                className="flex-shrink-0 transition-all duration-200 rounded-[1.8rem]"
-              >
-                <div
-                  style={{
-                    transform: `scale(${phoneScale})`,
-                    transformOrigin: "top left",
-                    width: "640px",
-                    height: "1280px",
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                  }}
-                >
-                  <InvoicePreview data={invoiceData} />
-                </div>
-              </div>
-            </div>
+          {/* Formal Document Preview inside Modal */}
+          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-6 max-w-full overflow-x-auto mb-16 flex flex-col items-center">
+            <ScaleWrapper explicitScale={phoneScale}>
+              <InvoicePreview
+                data={invoiceData}
+                verificationUrl={
+                  generatedId && typeof window !== "undefined"
+                    ? `${window.location.href.split("?")[0]}?id=${generatedId}`
+                    : undefined
+                }
+              />
+            </ScaleWrapper>
           </div>
         </div>
       )}

@@ -2,6 +2,12 @@ import React, { useState, useRef, useEffect } from "react";
 import { InvoiceData } from "../types";
 import { getTodayFormattedDate } from "../utils/dateUtils";
 import {
+  getInitialAdminSettingsSync,
+  hydratePermanentAdminSettings,
+  savePermanentAdminSettings,
+  optimizeLogoImageToDataUrl,
+} from "../utils/adminStorage";
+import {
   Upload,
   Sparkles,
   Check,
@@ -30,9 +36,6 @@ interface AdminPanelProps {
   generatedId: string | null;
 }
 
-const DEFAULT_TLS = ["Sabbir Ahmed", "Tanvir Hasan", "Rakib Hossain", "Mehedi Hasan", "Mahmudul Hasan"];
-const DEFAULT_TRS = ["Nafis Iqbal", "Sumon Mia", "Al Amin", "Arif Rahman", "Shakil Khan"];
-
 export const AdminPanel: React.FC<AdminPanelProps> = ({
   initialData,
   onChange,
@@ -52,132 +55,145 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [activeModalTab, setActiveModalTab] = useState<"tl" | "tr">("tl");
   const [newTlInput, setNewTlInput] = useState("");
   const [newTrInput, setNewTrInput] = useState("");
+  const [saveNotice, setSaveNotice] = useState<string | null>(null);
 
-  // Load TL & TR lists from localStorage
-  const [tlList, setTlList] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem("saved_team_leaders");
-      return saved ? JSON.parse(saved) : DEFAULT_TLS;
-    } catch {
-      return DEFAULT_TLS;
-    }
-  });
+  // Load permanent TL & TR lists synchronously on boot
+  const [tlList, setTlList] = useState<string[]>(() => getInitialAdminSettingsSync().tlList);
+  const [trList, setTrList] = useState<string[]>(() => getInitialAdminSettingsSync().trList);
 
-  const [trList, setTrList] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem("saved_team_trainers");
-      return saved ? JSON.parse(saved) : DEFAULT_TRS;
-    } catch {
-      return DEFAULT_TRS;
-    }
-  });
+  const flashSaveNotice = (msg: string) => {
+    setSaveNotice(msg);
+    setTimeout(() => setSaveNotice(null), 2600);
+  };
 
-  // Save TL & TR lists to localStorage
+  // Hydrate from IndexedDB / Server / Supabase on mount so saved names & logo never disappear
   useEffect(() => {
-    try {
-      localStorage.setItem("saved_team_leaders", JSON.stringify(tlList));
-    } catch (e) {
-      console.error(e);
-    }
-  }, [tlList]);
+    let active = true;
+    hydratePermanentAdminSettings().then((persisted) => {
+      if (!active) return;
+      setTlList(persisted.tlList);
+      setTrList(persisted.trList);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem("saved_team_trainers", JSON.stringify(trList));
-    } catch (e) {
-      console.error(e);
-    }
-  }, [trList]);
+      const nextTl =
+        persisted.selectedTl && persisted.tlList.includes(persisted.selectedTl)
+          ? persisted.selectedTl
+          : persisted.tlList[0] || initialData.teamLeader || "";
+      const nextTr =
+        persisted.selectedTr && persisted.trList.includes(persisted.selectedTr)
+          ? persisted.selectedTr
+          : persisted.trList[0] || initialData.teamTrainer || "";
+      const nextLogo = persisted.logoUrl || initialData.logoUrl || "";
 
-  // Load sticky selected TL & TR on mount or when lists change
-  useEffect(() => {
-    try {
-      const savedTr = localStorage.getItem("last_selected_team_trainer");
-      const savedTl = localStorage.getItem("last_selected_team_leader");
-
-      let targetTr = initialData.teamTrainer;
-      let targetTl = initialData.teamLeader;
-
-      // Ensure Team Trainer is sticky
-      if (savedTr && trList.includes(savedTr)) {
-        targetTr = savedTr;
-      } else if (!targetTr && trList.length > 0) {
-        targetTr = trList[0];
-      }
-
-      // Ensure Team Leader is sticky
-      if (savedTl && tlList.includes(savedTl)) {
-        targetTl = savedTl;
-      } else if (!targetTl && tlList.length > 0) {
-        targetTl = tlList[0];
-      }
-
-      if (targetTr !== initialData.teamTrainer || targetTl !== initialData.teamLeader) {
+      if (
+        nextTl !== initialData.teamLeader ||
+        nextTr !== initialData.teamTrainer ||
+        nextLogo !== (initialData.logoUrl || "")
+      ) {
         onChange({
           ...initialData,
-          teamTrainer: targetTr,
-          teamLeader: targetTl,
+          teamLeader: nextTl,
+          teamTrainer: nextTr,
+          logoUrl: nextLogo,
         });
       }
-    } catch (e) {
-      console.error(e);
-    }
-  }, [trList, tlList]);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const logoInputRef = useRef<HTMLInputElement>(null);
 
-  // Add new TL
+  // Switch active TL
+  const handleSelectTl = (tlName: string) => {
+    onChange({ ...initialData, teamLeader: tlName });
+    savePermanentAdminSettings({ tlList, selectedTl: tlName });
+  };
+
+  // Switch active TR
+  const handleSelectTr = (trName: string) => {
+    onChange({ ...initialData, teamTrainer: trName });
+    savePermanentAdminSettings({ trList, selectedTr: trName });
+  };
+
+  // Add & Permanently Save new TL
   const handleAddTl = () => {
     const trimmed = newTlInput.trim();
     if (!trimmed) return;
-    if (!tlList.includes(trimmed)) {
-      const updated = [...tlList, trimmed];
-      setTlList(updated);
-      onChange({ ...initialData, teamLeader: trimmed });
-      localStorage.setItem("last_selected_team_leader", trimmed);
-    } else {
-      onChange({ ...initialData, teamLeader: trimmed });
-      localStorage.setItem("last_selected_team_leader", trimmed);
-    }
+    const updated = tlList.includes(trimmed) ? tlList : [...tlList, trimmed];
+    setTlList(updated);
+    onChange({ ...initialData, teamLeader: trimmed });
+    savePermanentAdminSettings({ tlList: updated, selectedTl: trimmed });
     setNewTlInput("");
+    flashSaveNotice(`টিম লিডার "${trimmed}" স্থায়ীভাবে সেভ হয়েছে!`);
   };
 
-  // Delete TL
+  // Delete TL (Only when admin explicitly clicks Delete)
   const handleDeleteTl = (nameToDelete: string) => {
     const updated = tlList.filter((item) => item !== nameToDelete);
     setTlList(updated);
-    if (initialData.teamLeader === nameToDelete) {
-      const nextTl = updated[0] || "";
-      onChange({ ...initialData, teamLeader: nextTl });
-      localStorage.setItem("last_selected_team_leader", nextTl);
-    }
+    const nextTl = initialData.teamLeader === nameToDelete ? updated[0] || "" : initialData.teamLeader || "";
+    onChange({ ...initialData, teamLeader: nextTl });
+    savePermanentAdminSettings({ tlList: updated, selectedTl: nextTl });
+    flashSaveNotice(`"${nameToDelete}" তালিকা থেকে ডিলিট করা হয়েছে`);
   };
 
-  // Add new TR
+  // Add & Permanently Save new TR
   const handleAddTr = () => {
     const trimmed = newTrInput.trim();
     if (!trimmed) return;
-    if (!trList.includes(trimmed)) {
-      const updated = [...trList, trimmed];
-      setTrList(updated);
-      onChange({ ...initialData, teamTrainer: trimmed });
-      localStorage.setItem("last_selected_team_trainer", trimmed);
-    } else {
-      onChange({ ...initialData, teamTrainer: trimmed });
-      localStorage.setItem("last_selected_team_trainer", trimmed);
-    }
+    const updated = trList.includes(trimmed) ? trList : [...trList, trimmed];
+    setTrList(updated);
+    onChange({ ...initialData, teamTrainer: trimmed });
+    savePermanentAdminSettings({ trList: updated, selectedTr: trimmed });
     setNewTrInput("");
+    flashSaveNotice(`টিম ট্রেনার "${trimmed}" স্থায়ীভাবে সেভ হয়েছে!`);
   };
 
-  // Delete TR
+  // Delete TR (Only when admin explicitly clicks Delete)
   const handleDeleteTr = (nameToDelete: string) => {
     const updated = trList.filter((item) => item !== nameToDelete);
     setTrList(updated);
-    if (initialData.teamTrainer === nameToDelete) {
-      const nextTr = updated[0] || "";
-      onChange({ ...initialData, teamTrainer: nextTr });
-      localStorage.setItem("last_selected_team_trainer", nextTr);
+    const nextTr = initialData.teamTrainer === nameToDelete ? updated[0] || "" : initialData.teamTrainer || "";
+    onChange({ ...initialData, teamTrainer: nextTr });
+    savePermanentAdminSettings({ trList: updated, selectedTr: nextTr });
+    flashSaveNotice(`"${nameToDelete}" তালিকা থেকে ডিলিট করা হয়েছে`);
+  };
+
+  // Save any pending input & close modal
+  const handleSaveAndCloseModal = () => {
+    let nextTlList = tlList;
+    let nextTrList = trList;
+    let nextSelectedTl = initialData.teamLeader || "";
+    let nextSelectedTr = initialData.teamTrainer || "";
+
+    if (newTlInput.trim()) {
+      const t = newTlInput.trim();
+      if (!nextTlList.includes(t)) nextTlList = [...nextTlList, t];
+      nextSelectedTl = t;
+      setTlList(nextTlList);
+      setNewTlInput("");
     }
+    if (newTrInput.trim()) {
+      const r = newTrInput.trim();
+      if (!nextTrList.includes(r)) nextTrList = [...nextTrList, r];
+      nextSelectedTr = r;
+      setTrList(nextTrList);
+      setNewTrInput("");
+    }
+
+    onChange({
+      ...initialData,
+      teamLeader: nextSelectedTl,
+      teamTrainer: nextSelectedTr,
+    });
+    savePermanentAdminSettings({
+      tlList: nextTlList,
+      trList: nextTrList,
+      selectedTl: nextSelectedTl,
+      selectedTr: nextSelectedTr,
+    });
+    setShowTlTrModal(false);
   };
 
   // Real-time automatic parsing on paste or type
@@ -190,7 +206,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     }
 
     try {
-      // Robust regex parser to support multiple variations including TL and TR
       const nameMatch = text.match(/(?:Name|নাম)\s*[:：-]?\s*(.*)/i);
       const emailMatch = text.match(/(?:Email|ইমেইল)\s*[:：-]?\s*(.*)/i);
       const phoneMatch = text.match(/(?:Phone|মোবাইল|ফোন)\s*[:：-]?\s*(.*)/i);
@@ -208,24 +223,24 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       if (phoneMatch) parsed.phone = phoneMatch[1].trim();
       if (refMatch) parsed.referralCode = refMatch[1].trim();
       if (teamMatch) parsed.teamCode = teamMatch[1].trim();
+
+      let updatedTlList = tlList;
+      let updatedTrList = trList;
+
       if (tlMatch) {
         const parsedTl = tlMatch[1].trim();
         parsed.teamLeader = parsedTl;
-        if (parsedTl) {
-          localStorage.setItem("last_selected_team_leader", parsedTl);
-          if (!tlList.includes(parsedTl)) {
-            setTlList((prev) => [...prev, parsedTl]);
-          }
+        if (parsedTl && !updatedTlList.includes(parsedTl)) {
+          updatedTlList = [...updatedTlList, parsedTl];
+          setTlList(updatedTlList);
         }
       }
       if (trMatch) {
         const parsedTr = trMatch[1].trim();
         parsed.teamTrainer = parsedTr;
-        if (parsedTr) {
-          localStorage.setItem("last_selected_team_trainer", parsedTr);
-          if (!trList.includes(parsedTr)) {
-            setTrList((prev) => [...prev, parsedTr]);
-          }
+        if (parsedTr && !updatedTrList.includes(parsedTr)) {
+          updatedTrList = [...updatedTrList, parsedTr];
+          setTrList(updatedTrList);
         }
       }
       if (cashbackMatch) parsed.cashback = cashbackMatch[1].trim();
@@ -233,13 +248,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       if (dateMatch) parsed.date = dateMatch[1].trim();
 
       if (Object.keys(parsed).length > 0) {
+        const finalTl = parsed.teamLeader || initialData.teamLeader || "";
+        const finalTr = parsed.teamTrainer || initialData.teamTrainer || "";
         onChange({
           ...initialData,
-          // Preserve selected teamLeader and teamTrainer if not present in parsed text
-          teamTrainer: parsed.teamTrainer || initialData.teamTrainer || localStorage.getItem("last_selected_team_trainer") || "",
-          teamLeader: parsed.teamLeader || initialData.teamLeader || localStorage.getItem("last_selected_team_leader") || "",
+          teamTrainer: finalTr,
+          teamLeader: finalTl,
           ...parsed,
         } as InvoiceData);
+        savePermanentAdminSettings({
+          tlList: updatedTlList,
+          trList: updatedTrList,
+          selectedTl: finalTl,
+          selectedTr: finalTr,
+        });
         setParseSuccess(true);
       } else {
         setParseSuccess(false);
@@ -283,27 +305,29 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     setParseError(null);
   };
 
-  // Convert File to Base64 helper
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = (error) => reject(error);
-    });
-  };
-
-  // Handle logo upload
+  // Handle permanent logo upload (stays saved forever until explicitly deleted)
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const base64Data = await fileToBase64(file);
-      onChange({ ...initialData, logoUrl: base64Data });
-      localStorage.setItem("company_logo", base64Data);
+      const optimizedLogo = await optimizeLogoImageToDataUrl(file, 512);
+      onChange({ ...initialData, logoUrl: optimizedLogo });
+      await savePermanentAdminSettings({ logoUrl: optimizedLogo });
+      flashSaveNotice("লোগো স্থায়ীভাবে সেভ হয়েছে!");
     } catch (err) {
       console.error("Failed to upload logo", err);
+    } finally {
+      if (logoInputRef.current) {
+        logoInputRef.current.value = "";
+      }
     }
+  };
+
+  // Explicit logo delete handler (only removes when admin clicks Delete)
+  const handleDeleteLogo = async () => {
+    onChange({ ...initialData, logoUrl: "" });
+    await savePermanentAdminSettings({ logoUrl: "" });
+    flashSaveNotice("আপলোড করা লোগো ডিলিট করা হয়েছে");
   };
 
   // Set Today's Date
@@ -322,9 +346,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       const dataUrl = await toPng(element, {
         quality: 1.0,
         pixelRatio: 3,
+        backgroundColor: "#ffffff",
+        width: element.offsetWidth,
+        height: element.offsetHeight,
         style: {
-          transform: "scale(1)",
-          borderRadius: "2rem",
+          transform: "none",
+          transformOrigin: "top left",
+          borderRadius: "0px",
         },
       });
 
@@ -494,77 +522,138 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           </div>
         </div>
 
-        {/* TEAM LEADER (TL) & TEAM TRAINER (TR) DROPDOWNS */}
+        {/* TEAM LEADER (TL) & TEAM TRAINER (TR) PERMANENT SWITCHER & MANAGER */}
         <div className="bg-amber-50/60 border border-amber-200/80 rounded-2xl p-3.5 flex flex-col gap-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <span className="text-[11px] font-black text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
               <Award className="w-3.5 h-3.5 text-amber-600" />
-              টিম লিডার (TL) ও টিম ট্রেনার (TR) নির্বাচন
+              টিম লিডার (TL) ও টিম ট্রেনার (TR) সুইচ ও সেভ প্যানেল
             </span>
             <button
               type="button"
               onClick={() => setShowTlTrModal(true)}
-              className="text-[10px] font-black text-amber-700 hover:text-amber-900 underline flex items-center gap-1"
+              className="bg-amber-600 hover:bg-amber-700 text-white px-2.5 py-1 rounded-lg text-[10.5px] font-black flex items-center gap-1 shadow-2xs transition cursor-pointer shrink-0"
             >
-              <Plus className="w-3 h-3" /> নাম যুক্ত / পরিবর্তন করুন
+              <Plus className="w-3 h-3" /> নতুন যোগ / ডিলিট
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {/* Team Leader Select */}
-            <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1">
-                <UserCheck className="w-3.5 h-3.5 text-blue-600" />
-                টিম লিডার (Team Leader - TL)
-              </label>
-              <div className="flex gap-1.5">
-                <select
-                  value={initialData.teamLeader || ""}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    onChange({ ...initialData, teamLeader: val });
-                    if (val) {
-                      localStorage.setItem("last_selected_team_leader", val);
-                    }
+          {saveNotice && (
+            <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5">
+              <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              {saveNotice}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            {/* Team Leader Select + Quick Switch Buttons */}
+            <div className="flex flex-col gap-1.5 bg-white/80 border border-amber-200/70 rounded-xl p-2.5">
+              <label className="text-[11px] font-extrabold text-slate-700 flex items-center justify-between">
+                <span className="flex items-center gap-1">
+                  <UserCheck className="w-3.5 h-3.5 text-blue-600" />
+                  টিম লিডার (TL)
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveModalTab("tl");
+                    setShowTlTrModal(true);
                   }}
-                  className="w-full bg-white border border-amber-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                  className="text-[10px] font-bold text-blue-600 hover:underline cursor-pointer"
                 >
-                  <option value="">-- টিম লিডার সিলেক্ট করুন --</option>
-                  {tlList.map((tl, idx) => (
-                    <option key={idx} value={tl}>
-                      {tl}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                  + এড/ম্যানেজ ({tlList.length})
+                </button>
+              </label>
+              <select
+                value={initialData.teamLeader || ""}
+                onChange={(e) => handleSelectTl(e.target.value)}
+                className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer"
+              >
+                <option value="">-- টিম লিডার সিলেক্ট করুন --</option>
+                {tlList.map((tl, idx) => (
+                  <option key={idx} value={tl}>
+                    {tl}
+                  </option>
+                ))}
+              </select>
+
+              {/* One-Click Quick Switch Chips for Saved TLs */}
+              {tlList.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-0.5 max-h-20 overflow-y-auto">
+                  {tlList.map((tl, idx) => {
+                    const isActive = initialData.teamLeader === tl;
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleSelectTl(tl)}
+                        className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition cursor-pointer border ${
+                          isActive
+                            ? "bg-[#0F4C81] text-white border-[#0F4C81] shadow-2xs"
+                            : "bg-slate-50 hover:bg-blue-50 text-slate-700 border-slate-200"
+                        }`}
+                      >
+                        {tl}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
-            {/* Team Trainer Select */}
-            <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1">
-                <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                টিম ট্রেনার (Team Trainer - TR)
-              </label>
-              <div className="flex gap-1.5">
-                <select
-                  value={initialData.teamTrainer || ""}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    onChange({ ...initialData, teamTrainer: val });
-                    if (val) {
-                      localStorage.setItem("last_selected_team_trainer", val);
-                    }
+            {/* Team Trainer Select + Quick Switch Buttons */}
+            <div className="flex flex-col gap-1.5 bg-white/80 border border-amber-200/70 rounded-xl p-2.5">
+              <label className="text-[11px] font-extrabold text-slate-700 flex items-center justify-between">
+                <span className="flex items-center gap-1">
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                  টিম ট্রেনার (TR)
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveModalTab("tr");
+                    setShowTlTrModal(true);
                   }}
-                  className="w-full bg-white border border-amber-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                  className="text-[10px] font-bold text-emerald-700 hover:underline cursor-pointer"
                 >
-                  <option value="">-- টিম ট্রেনার সিলেক্ট করুন --</option>
-                  {trList.map((tr, idx) => (
-                    <option key={idx} value={tr}>
-                      {tr}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                  + এড/ম্যানেজ ({trList.length})
+                </button>
+              </label>
+              <select
+                value={initialData.teamTrainer || ""}
+                onChange={(e) => handleSelectTr(e.target.value)}
+                className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 cursor-pointer"
+              >
+                <option value="">-- টিম ট্রেনার সিলেক্ট করুন --</option>
+                {trList.map((tr, idx) => (
+                  <option key={idx} value={tr}>
+                    {tr}
+                  </option>
+                ))}
+              </select>
+
+              {/* One-Click Quick Switch Chips for Saved TRs */}
+              {trList.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-0.5 max-h-20 overflow-y-auto">
+                  {trList.map((tr, idx) => {
+                    const isActive = initialData.teamTrainer === tr;
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleSelectTr(tr)}
+                        className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition cursor-pointer border ${
+                          isActive
+                            ? "bg-emerald-700 text-white border-emerald-700 shadow-2xs"
+                            : "bg-slate-50 hover:bg-emerald-50 text-slate-700 border-slate-200"
+                        }`}
+                      >
+                        {tr}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -731,34 +820,71 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           </div>
 
           <div className="mt-1.5">
-            {/* Custom Logo upload button */}
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[11px] font-bold text-slate-500">অফিসিয়াল লোগো আপলোড (Company Logo)</span>
-              <div className="flex gap-2 items-center">
-                <button
-                  type="button"
-                  onClick={() => logoInputRef.current?.click()}
-                  className="bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 py-1.5 px-3.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 active:scale-95 cursor-pointer"
-                >
-                  <Upload className="w-3.5 h-3.5" />
-                  লোগো ফাইল দিন
-                </button>
-                <input
-                  type="file"
-                  ref={logoInputRef}
-                  onChange={handleLogoUpload}
-                  accept="image/*"
-                  className="hidden"
-                />
-                {initialData.logoUrl ? (
-                  <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2 py-1 rounded-lg text-[10px] font-bold text-[#0F4C81]">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                    আপলোড হয়েছে
+            {/* Permanent Custom Logo Upload & Delete Box */}
+            <div className="flex flex-col gap-2 bg-slate-50/80 border border-slate-200/80 rounded-xl p-3">
+              <span className="text-[11px] font-bold text-slate-600">
+                অফিসিয়াল লোগো আপলোড (ডিলিট না করা পর্যন্ত সবসময় সেভ থাকবে)
+              </span>
+              <input
+                type="file"
+                ref={logoInputRef}
+                onChange={handleLogoUpload}
+                accept="image/*"
+                className="hidden"
+              />
+              {initialData.logoUrl ? (
+                <div className="flex flex-wrap items-center justify-between gap-2.5 bg-white border border-emerald-200 rounded-xl p-2.5">
+                  <div className="flex items-center gap-2.5">
+                    <img
+                      src={initialData.logoUrl}
+                      alt="Saved Logo"
+                      className="w-10 h-10 rounded-full object-contain border border-slate-200 bg-white p-0.5"
+                      referrerPolicy="no-referrer"
+                    />
+                    <div className="flex flex-col">
+                      <span className="text-xs font-extrabold text-emerald-800 flex items-center gap-1">
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                        লোগো স্থায়ীভাবে সেভ আছে
+                      </span>
+                      <span className="text-[10px] text-slate-500 font-semibold">
+                        ডিলিট না করলে সবসময় এটিই থাকবে
+                      </span>
+                    </div>
                   </div>
-                ) : (
-                  <span className="text-[10px] text-slate-400 font-semibold">ডিফল্ট লোগো সক্রিয়</span>
-                )}
-              </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => logoInputRef.current?.click()}
+                      className="text-[10.5px] font-bold text-[#0F4C81] bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2.5 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1"
+                    >
+                      <Upload className="w-3 h-3" />
+                      পরিবর্তন
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDeleteLogo}
+                      className="text-[10.5px] font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 px-2.5 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      লোগো ডিলিট করুন
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => logoInputRef.current?.click()}
+                    className="bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 py-2 px-3.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-2xs active:scale-95 cursor-pointer"
+                  >
+                    <Upload className="w-3.5 h-3.5 text-blue-600" />
+                    নতুন লোগো আপলোড ও সেভ করুন
+                  </button>
+                  <span className="text-[10.5px] text-slate-400 font-semibold">
+                    বর্তমানে ডিফল্ট লোগো সক্রিয় আছে
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -942,45 +1068,66 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     value={newTlInput}
                     onChange={(e) => setNewTlInput(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddTl())}
-                    className="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                    className="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                   />
                   <button
                     type="button"
                     onClick={handleAddTl}
-                    className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-xs font-black flex items-center gap-1 shadow-sm active:scale-95 cursor-pointer"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-black flex items-center gap-1 shadow-sm active:scale-95 cursor-pointer whitespace-nowrap"
                   >
-                    <Plus className="w-4 h-4" /> যোগ করুন
+                    <Check className="w-4 h-4" /> সেভ করুন
                   </button>
                 </div>
 
                 <div className="flex flex-col gap-2 max-h-56 overflow-y-auto pr-1">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                    সংরক্ষিত টিম লিডারদের তালিকা
+                    স্থায়ীভাবে সংরক্ষিত টিম লিডার (ক্লিক করে সুইচ করুন)
                   </span>
                   {tlList.length === 0 ? (
                     <p className="text-xs text-slate-400 italic py-2 text-center">কোনো নাম যুক্ত নেই</p>
                   ) : (
-                    tlList.map((item, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between bg-slate-50 border border-slate-200/80 px-3 py-2 rounded-xl text-xs font-bold text-slate-800 group hover:border-amber-300 transition"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-[10px] flex items-center justify-center font-black">
-                            {idx + 1}
-                          </span>
-                          <span>{item}</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteTl(item)}
-                          className="text-slate-400 hover:text-red-600 p-1 rounded-lg hover:bg-red-50 transition cursor-pointer"
-                          title="মুছে ফেলুন"
+                    tlList.map((item, idx) => {
+                      const isSelected = initialData.teamLeader === item;
+                      return (
+                        <div
+                          key={idx}
+                          className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition border ${
+                            isSelected
+                              ? "bg-blue-50 border-blue-300 text-[#0F4C81]"
+                              : "bg-slate-50 border-slate-200/80 text-slate-800 hover:border-blue-200"
+                          }`}
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ))
+                          <button
+                            type="button"
+                            onClick={() => handleSelectTl(item)}
+                            className="flex items-center gap-2 flex-1 text-left cursor-pointer"
+                          >
+                            <span
+                              className={`w-5 h-5 rounded-full text-[10px] flex items-center justify-center font-black shrink-0 ${
+                                isSelected ? "bg-[#0F4C81] text-white" : "bg-blue-100 text-blue-700"
+                              }`}
+                            >
+                              {isSelected ? "✓" : idx + 1}
+                            </span>
+                            <span>{item}</span>
+                            {isSelected && (
+                              <span className="text-[9.5px] font-extrabold bg-[#0F4C81] text-white px-1.5 py-0.5 rounded ml-1">
+                                Active
+                              </span>
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteTl(item)}
+                            className="text-red-500 hover:text-red-700 px-2 py-1 rounded-lg hover:bg-red-50 transition cursor-pointer flex items-center gap-1 text-[10px] font-bold"
+                            title="ডিলিট করুন"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            ডিলিট
+                          </button>
+                        </div>
+                      );
+                    })
                   )}
                 </div>
               </div>
@@ -996,58 +1143,82 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     value={newTrInput}
                     onChange={(e) => setNewTrInput(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddTr())}
-                    className="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                    className="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                   />
                   <button
                     type="button"
                     onClick={handleAddTr}
-                    className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-xs font-black flex items-center gap-1 shadow-sm active:scale-95 cursor-pointer"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-black flex items-center gap-1 shadow-sm active:scale-95 cursor-pointer whitespace-nowrap"
                   >
-                    <Plus className="w-4 h-4" /> যোগ করুন
+                    <Check className="w-4 h-4" /> সেভ করুন
                   </button>
                 </div>
 
                 <div className="flex flex-col gap-2 max-h-56 overflow-y-auto pr-1">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                    সংরক্ষিত টিম ট্রেনারদের তালিকা
+                    স্থায়ীভাবে সংরক্ষিত টিম ট্রেনার (ক্লিক করে সুইচ করুন)
                   </span>
                   {trList.length === 0 ? (
                     <p className="text-xs text-slate-400 italic py-2 text-center">কোনো নাম যুক্ত নেই</p>
                   ) : (
-                    trList.map((item, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between bg-slate-50 border border-slate-200/80 px-3 py-2 rounded-xl text-xs font-bold text-slate-800 group hover:border-amber-300 transition"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-700 text-[10px] flex items-center justify-center font-black">
-                            {idx + 1}
-                          </span>
-                          <span>{item}</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteTr(item)}
-                          className="text-slate-400 hover:text-red-600 p-1 rounded-lg hover:bg-red-50 transition cursor-pointer"
-                          title="মুছে ফেলুন"
+                    trList.map((item, idx) => {
+                      const isSelected = initialData.teamTrainer === item;
+                      return (
+                        <div
+                          key={idx}
+                          className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition border ${
+                            isSelected
+                              ? "bg-emerald-50 border-emerald-300 text-emerald-900"
+                              : "bg-slate-50 border-slate-200/80 text-slate-800 hover:border-emerald-200"
+                          }`}
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ))
+                          <button
+                            type="button"
+                            onClick={() => handleSelectTr(item)}
+                            className="flex items-center gap-2 flex-1 text-left cursor-pointer"
+                          >
+                            <span
+                              className={`w-5 h-5 rounded-full text-[10px] flex items-center justify-center font-black shrink-0 ${
+                                isSelected ? "bg-emerald-700 text-white" : "bg-amber-100 text-amber-700"
+                              }`}
+                            >
+                              {isSelected ? "✓" : idx + 1}
+                            </span>
+                            <span>{item}</span>
+                            {isSelected && (
+                              <span className="text-[9.5px] font-extrabold bg-emerald-700 text-white px-1.5 py-0.5 rounded ml-1">
+                                Active
+                              </span>
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteTr(item)}
+                            className="text-red-500 hover:text-red-700 px-2 py-1 rounded-lg hover:bg-red-50 transition cursor-pointer flex items-center gap-1 text-[10px] font-bold"
+                            title="ডিলিট করুন"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            ডিলিট
+                          </button>
+                        </div>
+                      );
+                    })
                   )}
                 </div>
               </div>
             )}
 
             {/* Modal footer */}
-            <div className="pt-2 border-t border-slate-100 flex justify-end">
+            <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+              <span className="text-[10.5px] font-bold text-slate-500">
+                ডিলিট না করা পর্যন্ত সকল নাম স্থায়ীভাবে সেভ থাকবে
+              </span>
               <button
                 type="button"
-                onClick={() => setShowTlTrModal(false)}
-                className="bg-[#0F4C81] hover:bg-[#0A3960] text-white px-5 py-2.5 rounded-xl text-xs font-black transition active:scale-95 cursor-pointer shadow-md"
+                onClick={handleSaveAndCloseModal}
+                className="bg-[#0F4C81] hover:bg-[#0A3960] text-white px-5 py-2.5 rounded-xl text-xs font-black transition active:scale-95 cursor-pointer shadow-md whitespace-nowrap"
               >
-                সম্পন্ন (Done)
+                সেভ ও সম্পন্ন (Save)
               </button>
             </div>
           </div>
