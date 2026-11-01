@@ -886,10 +886,10 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
       </div>
 
       {/* =========================================================
-          9. BOTTOM DARK CORPORATE NAVY FOOTER BAR + RIBBON (NO LEAVES)
+          9. BOTTOM UNIFORM CORPORATE NAVY FOOTER BAR (NO LEAVES)
          ========================================================= */}
-      <div className="bg-[#0E2954] text-white px-9 py-3.5 flex items-center justify-between relative overflow-hidden mt-auto">
-        <div className="flex items-center gap-2.5 z-10">
+      <div className="bg-[#0E2954] text-white px-9 py-3.5 flex items-center justify-between mt-auto">
+        <div className="flex items-center gap-2.5">
           {/* Formal Academic Shield Emblem (Zero Leaves) */}
           <div className="w-6 h-6 rounded-full bg-white/12 border border-white/25 flex items-center justify-center shrink-0">
             <svg
@@ -905,24 +905,13 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
           </span>
         </div>
 
-        <div className="flex items-center gap-2.5 pr-12 z-10 text-[11.5px] font-medium text-slate-200">
+        <div className="flex items-center gap-2.5 text-[11.5px] font-medium text-slate-200">
           <span>Learn</span>
           <span className="w-1.5 h-1.5 rounded-full bg-[#38BDF8]" aria-hidden="true" />
           <span>Grow</span>
           <span className="w-1.5 h-1.5 rounded-full bg-[#2ECC71]" aria-hidden="true" />
           <span>Earn</span>
         </div>
-
-        {/* Bottom-Right Matching Diagonal Geometric Ribbon */}
-        <svg
-          viewBox="0 0 90 52"
-          className="absolute bottom-0 right-0 w-[86px] h-[52px] pointer-events-none"
-          aria-hidden="true"
-        >
-          <polygon points="18,52 60,0 74,0 32,52" fill="#FFFFFF" />
-          <polygon points="32,52 74,0 84,0 42,52" fill="#27AE60" />
-          <polygon points="42,52 84,0 90,0 90,52" fill="#7FB3D5" opacity="0.85" />
-        </svg>
       </div>
     </div>
   );
