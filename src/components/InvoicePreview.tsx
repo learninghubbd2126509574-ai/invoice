@@ -189,53 +189,32 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
 
       {/* =========================================================
           2. DOCUMENT TITLE & INVOICE DATE / SECURE ID
-         ========================================================= */}
-      <div className="px-9 py-4 flex items-center justify-between gap-4">
+          ========================================================= */}
+      <div className="px-9 py-2.5 flex items-center justify-between gap-4">
         <div className="flex flex-col">
-          <h2 className="text-[27px] font-extrabold text-[#0E2954] tracking-[-0.015em] leading-none uppercase">
+          <h2 className="text-[26px] font-extrabold text-[#0E2954] tracking-[-0.015em] leading-none uppercase">
             INVOICE / RECEIPT
           </h2>
-          <p className="text-[13px] font-medium text-[#486581] mt-1.5 leading-snug">
+          <p className="text-[12.5px] font-medium text-[#486581] mt-1.5 leading-snug">
             Purchase Confirmation &amp; Payment Details
           </p>
         </div>
 
-        <div className="flex flex-col items-end gap-2 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <svg
-              viewBox="0 0 28 28"
-              className="w-7 h-7 text-[#0E2954] shrink-0"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              aria-hidden="true"
-            >
-              <rect x="3.5" y="5" width="21" height="19.5" rx="3" />
-              <line x1="9" y1="2.5" x2="9" y2="7" strokeLinecap="round" />
-              <line x1="19" y1="2.5" x2="19" y2="7" strokeLinecap="round" />
-              <line x1="3.5" y1="10.5" x2="24.5" y2="10.5" />
-              <circle cx="9.5" cy="15" r="1.1" fill="currentColor" stroke="none" />
-              <circle cx="14" cy="15" r="1.1" fill="currentColor" stroke="none" />
-              <circle cx="18.5" cy="15" r="1.1" fill="currentColor" stroke="none" />
-              <circle cx="9.5" cy="19.5" r="1.1" fill="currentColor" stroke="none" />
-              <circle cx="14" cy="19.5" r="1.1" fill="currentColor" stroke="none" />
-              <circle cx="18.5" cy="19.5" r="1.1" fill="currentColor" stroke="none" />
-            </svg>
-            <div className="flex flex-col text-left">
-              <span className="text-[11px] font-semibold text-[#526D82] leading-none">
-                Invoice Date
-              </span>
-              <span className="text-[14.5px] font-extrabold text-[#0E2954] tabular-nums leading-none mt-1">
-                {date}
-              </span>
-            </div>
+        <div className="flex flex-col items-start shrink-0">
+          <div className="flex flex-col pl-8">
+            <span className="text-[11px] font-semibold text-[#526D82] leading-none">
+              Invoice Date
+            </span>
+            <span className="text-[14px] font-extrabold text-[#0E2954] tabular-nums leading-none mt-1">
+              {date}
+            </span>
           </div>
 
-          <div className="bg-[#EAF2FD] border border-[#CFE1FA] rounded-lg px-3.5 py-1.5 flex items-center gap-2">
-            <span className="text-[11.5px] font-bold text-[#1565D8] leading-none">
+          <div className="mt-2 bg-[#EAF2FD] border border-[#CFE1FA] rounded-lg px-3 py-1.5 flex items-center gap-2">
+            <span className="text-[11px] font-bold text-[#1565D8] leading-none">
               Secure ID:
             </span>
-            <span className="text-[12.5px] font-extrabold text-[#0E2954] font-mono tabular-nums tracking-tight leading-none">
+            <span className="text-[12px] font-extrabold text-[#0E2954] font-mono tabular-nums tracking-tight leading-none">
               EL-{referralCode || "5373259"}-{teamCode || "336251"}
             </span>
           </div>
@@ -372,7 +351,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
               </div>
             </div>
 
-            {/* Row 4: Student ID (Clean Unboxed Typography) */}
+            {/* Row 4: Student ID */}
             <div className="grid grid-cols-12 items-center min-h-[40px] flex-1">
               <div className="col-span-5 h-full px-3 py-2 bg-[#F5F8FC] border-r border-[#DCE6F2] flex items-center gap-2.5">
                 <div className="w-6 h-6 rounded-md bg-[#E6EFFC] border border-[#CFE0F8] flex items-center justify-center shrink-0">
@@ -391,7 +370,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
               </div>
             </div>
 
-            {/* Row 5: Team Code (Clean Unboxed Typography) */}
+            {/* Row 5: Team Code */}
             <div className="grid grid-cols-12 items-center min-h-[40px] flex-1">
               <div className="col-span-5 h-full px-3 py-2 bg-[#F1F6FC] border-r border-[#DCE6F2] flex items-center gap-2.5">
                 <div className="w-6 h-6 rounded-md bg-[#E1EDFD] border border-[#C6DCFA] flex items-center justify-center shrink-0">
@@ -417,7 +396,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
               </div>
             </div>
 
-            {/* Row 6: Team Leader (Refined Separated TL Emblem + Name) */}
+            {/* Row 6: Team Leader (TL boxed badge, name unboxed plain text) */}
             <div className="grid grid-cols-12 items-center min-h-[40px] flex-1">
               <div className="col-span-5 h-full px-3 py-2 bg-[#F5F8FC] border-r border-[#DCE6F2] flex items-center gap-2.5">
                 <div className="w-6 h-6 rounded-md bg-[#E6EFFC] border border-[#CFE0F8] flex items-center justify-center shrink-0">
@@ -432,50 +411,40 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
                   Team Leader
                 </span>
               </div>
-              <div className="col-span-7 h-full px-3.5 py-2 bg-white flex items-center gap-2 min-w-0">
+              <div className="col-span-7 h-full px-3.5 py-1.5 bg-white flex items-center gap-2 min-w-0">
                 {cleanLeaderName ? (
-                  <>
-                    <span className="inline-flex items-center justify-center bg-gradient-to-r from-[#0F3460] to-[#1D4ED8] text-white text-[10px] font-extrabold tracking-[0.08em] px-2 py-[3px] rounded-full leading-none shadow-2xs shrink-0">
-                      TL
-                    </span>
-                    <span className="h-3.5 w-[1px] bg-[#CBD5E1] shrink-0" aria-hidden="true" />
-                    <span className="text-[13.5px] font-extrabold text-[#0B2548] truncate">
-                      {cleanLeaderName}
-                    </span>
-                  </>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-[#2563EB] text-white shadow-xs">TL</span>
+                    <span className="text-[13.5px] font-extrabold text-[#0B2548] truncate">{cleanLeaderName}</span>
+                  </div>
                 ) : (
-                  <span className="text-[13.5px] font-bold text-slate-400">N/A</span>
+                  <span className="text-[13px] font-bold text-slate-400">N/A</span>
                 )}
               </div>
             </div>
 
-            {/* Row 7: Team Trainer (Refined Separated TR Emblem + Name) */}
-            <div className="grid grid-cols-12 items-center min-h-[40px] flex-1">
-              <div className="col-span-5 h-full px-3 py-2 bg-[#F1F6FC] border-r border-[#DCE6F2] flex items-center gap-2.5">
-                <div className="w-6 h-6 rounded-md bg-[#E1EDFD] border border-[#C6DCFA] flex items-center justify-center shrink-0">
-                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 text-[#123E75] fill-current" aria-hidden="true">
+            {/* Row 7: Team Trainer (TR boxed badge, name unboxed plain text) */}
+            <div className="grid grid-cols-12 items-center min-h-[36px] flex-1">
+              <div className="col-span-5 h-full px-3 py-1.5 bg-[#F1F6FC] border-r border-[#DCE6F2] flex items-center gap-2.5">
+                <div className="w-5.5 h-5.5 rounded-md bg-[#E1EDFD] border border-[#C6DCFA] flex items-center justify-center shrink-0">
+                  <svg viewBox="0 0 24 24" className="w-3 h-3 text-[#123E75] fill-current" aria-hidden="true">
                     <circle cx="10" cy="9" r="3.4" />
                     <path d="M3.5 20c0-3.1 2.9-5.5 6.5-5.5s6.5 2.4 6.5 5.5H3.5z" />
                     <polygon points="18,3 19.1,5.3 21.6,5.6 19.8,7.4 20.2,9.9 18,8.7 15.8,9.9 16.2,7.4 14.4,5.6 16.9,5.3" />
                   </svg>
                 </div>
-                <span className="text-[12.5px] font-bold text-[#1E3A5F] whitespace-nowrap">
+                <span className="text-[12px] font-bold text-[#1E3A5F] whitespace-nowrap">
                   Team Trainer
                 </span>
               </div>
-              <div className="col-span-7 h-full px-3.5 py-2 bg-[#FAFBFD] flex items-center gap-2 min-w-0">
+              <div className="col-span-7 h-full px-3.5 py-1.5 bg-[#FAFBFD] flex items-center gap-2 min-w-0">
                 {cleanTrainerName ? (
-                  <>
-                    <span className="inline-flex items-center justify-center bg-gradient-to-r from-[#136534] to-[#1E8E3E] text-white text-[10px] font-extrabold tracking-[0.08em] px-2 py-[3px] rounded-full leading-none shadow-2xs shrink-0">
-                      TR
-                    </span>
-                    <span className="h-3.5 w-[1px] bg-[#CBD5E1] shrink-0" aria-hidden="true" />
-                    <span className="text-[13.5px] font-extrabold text-[#0B2548] truncate">
-                      {cleanTrainerName}
-                    </span>
-                  </>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-[#16A34A] text-white shadow-xs">TR</span>
+                    <span className="text-[13.5px] font-extrabold text-[#0B2548] truncate">{cleanTrainerName}</span>
+                  </div>
                 ) : (
-                  <span className="text-[13.5px] font-bold text-slate-400">N/A</span>
+                  <span className="text-[13px] font-bold text-slate-400">N/A</span>
                 )}
               </div>
             </div>
